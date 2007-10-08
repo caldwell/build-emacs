@@ -1,0 +1,30 @@
+#!/bin/sh
+set +e
+
+cd `dirname $0`
+(cd emacs-cvs-clean && cvs -Q update -Pd)
+DIR=emacs-cvs-`date +%F`
+cp -rp emacs-cvs-clean $DIR
+function clean () {
+	rm -rf $DIR
+}
+trap clean INT EXIT
+
+(cd $DIR/mac && ./make-package --self-contained)
+
+mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-`uname -p`-`sw_vers -productVersion`-`date +%F`.dmg
+
+# We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
+if [ `uname -p`x == i386x ]; then
+	(cd $DIR/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
+	mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-powerpc-`sw_vers -productVersion`-`date +%F`.dmg
+fi
+
+trap "" INT EXIT
+
+clean
+
+# At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my local server
+# and my high-bandwidth mirror and then adjusted the permissions such that the http daemon could write to the
+# directory (my original site had reddit style thumbs up/down voting on each build and votes were stored in
+# the build dir). I've redacted this part because it had a lot of server, user and directory names.
