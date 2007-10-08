@@ -1,0 +1,57 @@
+#!/bin/sh
+set -e
+set -x
+
+cd `dirname $0`
+
+PRETEST_DIR_URL="ftp://alpha.gnu.org/gnu/emacs/pretest"
+
+eval `curl -s "$PRETEST_DIR_URL/" | perl -MSort::Versions -ne 'push @v, { s=>$1, d=>$2, p=>$3, v=>$4 } if /(\d+) (\w+ \d+ \d+:\d+) (emacs-([\d.]+).tar.gz)\r\n/; END { %r = %{${[sort { versioncmp $b->{v}, $a->{v} } @v]}[0]}; print "SIZE=$r{s}\nLATEST=$r{p}\nVERSION=$r{v}\nDATE=\"$r{d}\"\n" }'`
+
+if [ \! -f pretest/$LATEST ]; then
+	(cd pretest && curl -s -O "$PRETEST_DIR_URL/$LATEST")
+else
+	if [ `stat -f "%z" pretest/$LATEST` != $SIZE ]; then
+		(cd pretest && curl -C - -s -O "$PRETEST_DIR_URL/$LATEST")
+	fi
+fi
+
+if [ -f emacs-builds/Emacs-pretest-$VERSION-`uname -p`-`sw_vers -productVersion`.dmg ]; then
+	# Already built? Done.
+	exit;
+fi
+
+(cd pretest && tar xzf $LATEST)
+
+DIR=`echo pretest/$LATEST | sed -e 's/.tar.gz$//'`
+
+function clean () {
+	rm -rf $DIR
+}
+trap clean INT EXIT
+
+# Correct stupid bugs in the first pretest release:
+test -f $DIR/mac/make-package || cp -p emacs-cvs-clean/mac/make-package $DIR/mac
+test -f $DIR/mac/Emacs.app/Contents/Resources/Emacs.icns || cp -p emacs-cvs-clean/mac/Emacs.app/Contents/Resources/Emacs.icns $DIR/mac/Emacs.app/Contents/Resources/
+
+(cd $DIR/mac && ./make-package --self-contained)
+
+mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-pretest-$VERSION-`uname -p`-`sw_vers -productVersion`.dmg
+
+# We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
+if [ `uname -p`x == i386x ]; then
+	(cd $DIR/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
+	mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-pretest-$VERSION-powerpc-`sw_vers -productVersion`.dmg
+fi
+
+trap "" INT EXIT
+
+clean
+
+TOUCHDATE=`perl -MPOSIX -MDate::Parse -e 'print strftime "%Y%m%d%H%M.%S", localtime str2time '"'$DATE';"`
+
+touch -t "$TOUCHDATE" emacs-builds/Emacs-pretest-$VERSION-*
+# At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my local server
+# and my high-bandwidth mirror and then adjusted the permissions such that the http daemon could write to the
+# directory (my original site had reddit style thumbs up/down voting on each build and votes were stored in
+# the build dir). I've redacted this part because it had a lot of server, user and directory names.
