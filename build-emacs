@@ -4,8 +4,8 @@ set +e
 cd `dirname $0`
 
 ./build-emacs-from-cvs
-./build-emacs-form-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
-./build-emacs-form-ftp ftp://ftp.gnu.org/gnu/emacs
+./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
+./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs
 
 # At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my local server
 # and my high-bandwidth mirror and then adjusted the permissions such that the http daemon could write to the
