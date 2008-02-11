@@ -9,6 +9,8 @@ LABEL=$([ x$2 = x ] || echo "$2-")
 
 eval `curl -s "$FTP_DIR_URL/" | perl -MSort::Versions -ne 'push @v, { s=>$1, d=>$2, p=>$3, v=>$4 } if /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+).tar.gz)/; END { %r = %{${[sort { versioncmp $b->{v}, $a->{v} } @v]}[0]}; print "SIZE=$r{s}\nLATEST=$r{p}\nVERSION=$r{v}\nDATE=\"$r{d}\"\n" }'`
 
+mkdir -p ftp-versions
+
 if [ \! -f ftp-versions/$LATEST ]; then
 	(cd ftp-versions && curl -s -O "$FTP_DIR_URL/$LATEST")
 else
