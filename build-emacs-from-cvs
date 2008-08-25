@@ -1,11 +1,15 @@
 #!/bin/sh
 set +e
 
+. ./notify
+
 cd `dirname $0`
 (cd emacs-cvs-clean && cvs -Q update -Pd)
 DIR=emacs-cvs-`date +%F`
 cp -rp emacs-cvs-clean $DIR
+MESSAGE="Emacs build failed (native)"
 function clean () {
+    [ x$MESSAGE != x ] && notify "$MESSAGE"
 	rm -rf $DIR
 }
 trap clean INT EXIT
@@ -13,12 +17,16 @@ trap clean INT EXIT
 (cd $DIR/mac && ./make-package --self-contained)
 
 mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-`uname -p`-`sw_vers -productVersion`-`date +%F`.dmg
+notify "Successfully built native emacs: "Emacs-`uname -p`-`sw_vers -productVersion`-`date +%F`.tar.gz
 
 # We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
 if [ `uname -p`x == i386x ]; then
+	MESSAGE="Emacs build failed (powerpc)"
 	(cd $DIR/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
 	mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-powerpc-`sw_vers -productVersion`-`date +%F`.dmg
+	notify "Successfully built powerpc emacs: "Emacs-powerpc-`sw_vers -productVersion`-`date +%F`.tar.gz
 fi
+MESSAGE=""
 
 trap "" INT EXIT
 
