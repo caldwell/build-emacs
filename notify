@@ -1,0 +1,5 @@
+function notify() {
+    command -v growlnotify > /dev/null || return
+    growlnotify --appIcon Emacs.app --message "$1"
+}
+
