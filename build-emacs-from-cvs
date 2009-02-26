@@ -2,36 +2,11 @@
 set -e
 
 . ./notify
+. ./build-emacs-functions
 
 cd `dirname $0`
 (cd emacs-cvs-clean && cvs -Q update -Pd)
 DIR=emacs-cvs-`date +%F`
 cp -rp emacs-cvs-clean $DIR
-MESSAGE="Emacs build failed (native)"
-function clean () {
-    [ x$MESSAGE != x ] && notify "$MESSAGE"
-    rm -rf $DIR
-}
-trap clean INT EXIT
 
-(cd $DIR && ./configure --with-ns && make install)
-(cd $DIR/nextstep && tar czf Emacs.app.tar.gz Emacs.app)
-
-mv $DIR/nextstep/Emacs.app.tar.gz emacs-builds/Emacs-`uname -p`-`sw_vers -productVersion`-`date +%F`.tar.gz
-
-notify "Successfully built native emacs: "Emacs-`uname -p`-`sw_vers -productVersion`-`date +%F`.tar.gz
-
-# We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
-if [ `uname -p`x == i386x ]; then
-    MESSAGE="Emacs build failed (powerpc)"
-    (cd $DIR && env CC=powerpc-apple-darwin9-gcc-4.2.1 ./configure --host=powerpc-apple-darwin --build=i386-apple-darwin --with-ns && \
-        env CC=powerpc-apple-darwin9-gcc-4.2.1 make install)
-    (cd $DIR/nextstep && tar czf Emacs.app.tar.gz Emacs.app)
-    mv $DIR/nextstep/Emacs.app.tar.gz emacs-builds/Emacs-powerpc-`sw_vers -productVersion`-`date +%F`.tar.gz
-    notify "Successfully built powerpc emacs: "Emacs-powerpc-`sw_vers -productVersion`-`date +%F`.tar.gz
-fi
-MESSAGE=""
-
-trap "" INT EXIT
-
-clean
+build_emacs "$DIR" Emacs-`date +%F`
