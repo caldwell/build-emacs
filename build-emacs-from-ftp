@@ -41,4 +41,4 @@ build_emacs "$DIR" "Emacs-${LABEL}$VERSION"
 
 TOUCHDATE=`perl -MPOSIX -MDate::Parse -e 'print strftime "%Y%m%d%H%M.%S", localtime str2time '"'$DATE';"`
 
-touch -t "$TOUCHDATE" emacs-builds/Emacs-${LABEL}$VERSION-*
+touch -c -t "$TOUCHDATE" emacs-builds/Emacs-${LABEL}$VERSION-*
