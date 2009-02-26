@@ -1,0 +1,84 @@
+#!/bin/sh
+
+. ./notify
+
+function clean () {
+    [ x$MESSAGE != x ] && notify "$MESSAGE"
+	rm -rf $SRC
+}
+
+function build_cocoa_emacs () {
+    (cd $SRC &&
+        ./configure --with-ns &&
+        make clean install)  || exit
+    (cd $SRC/nextstep &&
+        tar czf Emacs.app.tar.gz Emacs.app) || exit
+
+    if [ `uname -p`x == powerpc ]; then
+        mv $SRC/nextstep/Emacs.app.tar.gz emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.tar.gz
+        notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.tar.gz
+    else
+        notify "Successfully built native emacs."
+
+        # We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
+        mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-i386.app
+
+        MESSAGE="$OUT failed to build (powerpc)"
+        (cd $SRC && env CC=powerpc-apple-darwin9-gcc-4.2.1 ./configure --host=powerpc-apple-darwin --build=i386-apple-darwin --with-ns &&
+            env CC=powerpc-apple-darwin9-gcc-4.2.1 make clean install)
+
+        mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-powerpc.app
+
+        (cd $SRC/nextstep/Emacs-i386.app &&
+            for f in `find Contents/MacOS -type f -print0 | xargs -n 1 -0 file | perl -ne 'print "$1\n" if /(.*): Mach-O executable/'`; do
+                echo $f;
+                lipo -create $f ../Emacs-powerpc.app/$f -output $f.universal;
+                mv -f $f.universal $f;
+            done)
+
+        mv $SRC/nextstep/Emacs-i386.app $SRC/nextstep/Emacs.app
+        (cd $SRC/nextstep && tar czf Emacs.app.tar.gz Emacs.app)
+        mv $SRC/nextstep/Emacs.app.tar.gz emacs-builds/$OUT-universal-`sw_vers -productVersion`.tar.gz
+        notify "Successfully built universal emacs: "$OUT-universal-`sw_vers -productVersion`.tar.gz
+    fi
+}
+
+function build_carbon_emacs () {
+    # Correct stupid bugs in the first pretest release:
+    test -f $SRC/mac/make-package || cp -p emacs-cvs-clean/mac/make-package $SRC/mac
+    test -f $SRC/mac/Emacs.app/Contents/Resources/Emacs.icns || cp -p emacs-cvs-clean/mac/Emacs.app/Contents/Resources/Emacs.icns $SRC/mac/Emacs.app/Contents/Resources/
+
+    (cd $SRC/mac && ./make-package --self-contained)
+
+    mv $SRC/mac/EmacsInstaller.dmg emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.dmg
+    notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.dmg
+
+    # We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
+    if [ `uname -p`x == i386x ]; then
+	    MESSAGE="$OUT failed to build (powerpc)"
+	    (cd $SRC/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
+	    mv $SRC/mac/EmacsInstaller.dmg emacs-builds/$OUT-powerpc-`sw_vers -productVersion`.dmg
+	    notify "Successfully built powerpc emacs: "$OUT-powerpc-`sw_vers -productVersion`.dmg
+    fi
+}
+
+function build_emacs () {
+    SRC="$1"
+    OUT="$2"
+
+    MESSAGE="$OUT build failed (native)"
+
+    trap clean INT EXIT
+
+    if test -d $1/mac; then
+        build_carbon_emacs
+    else
+        build_cocoa_emacs
+    fi
+
+    MESSAGE=""
+
+    trap "" INT EXIT
+
+    clean
+}
