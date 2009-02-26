@@ -5,6 +5,7 @@ set -x
 cd `dirname $0`
 
 . ./notify
+. ./build-emacs-functions
 
 FTP_DIR_URL=${1:?"1st arg should be an ftp url"}
 LABEL=$([ x$2 = x ] || echo "$2-")
@@ -36,34 +37,7 @@ fi
 
 DIR=`echo ftp-versions/$LATEST | sed -e 's/.tar.gz$//'`
 
-function clean () {
-    [ x$MESSAGE != x ] && notify "$MESSAGE"
-	rm -rf $DIR
-}
-trap clean INT EXIT
-
-# Correct stupid bugs in the first pretest release:
-test -f $DIR/mac/make-package || cp -p emacs-cvs-clean/mac/make-package $DIR/mac
-test -f $DIR/mac/Emacs.app/Contents/Resources/Emacs.icns || cp -p emacs-cvs-clean/mac/Emacs.app/Contents/Resources/Emacs.icns $DIR/mac/Emacs.app/Contents/Resources/
-
-MESSAGE="Emacs-${LABEL}$VERSION failed to build (native)"
-(cd $DIR/mac && ./make-package --self-contained)
-
-mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-${LABEL}$VERSION-`uname -p`-`sw_vers -productVersion`.dmg
-notify "Successfully built native emacs: "Emacs-${LABEL}$VERSION-`uname -p`-`sw_vers -productVersion`.dmg
-
-# We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
-if [ `uname -p`x == i386x ]; then
-	MESSAGE="Emacs-${LABEL}$VERSION failed to build (powerpc)"
-	(cd $DIR/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
-	mv $DIR/mac/EmacsInstaller.dmg emacs-builds/Emacs-${LABEL}$VERSION-powerpc-`sw_vers -productVersion`.dmg
-	notify "Successfully built powerpc emacs: "Emacs-${LABEL}$VERSION-powerpc-`sw_vers -productVersion`.dmg
-fi
-MESSAGE=""
-
-trap "" INT EXIT
-
-clean
+build_emacs "$DIR" "Emacs-${LABEL}$VERSION"
 
 TOUCHDATE=`perl -MPOSIX -MDate::Parse -e 'print strftime "%Y%m%d%H%M.%S", localtime str2time '"'$DATE';"`
 
