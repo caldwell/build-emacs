@@ -28,7 +28,9 @@ else
 	fi
 fi
 
-if [ -f emacs-builds/Emacs-${LABEL}$VERSION-`uname -p`-`sw_vers -productVersion`.dmg ]; then
+if [ -f emacs-builds/Emacs-${LABEL}$VERSION-`uname -p`-`sw_vers -productVersion`.dmg \
+     -o \
+     -f emacs-builds/Emacs-${LABEL}$VERSION-universal-`sw_vers -productVersion`.dmg ]; then
 	# Already built? Done.
 	exit;
 fi
