@@ -28,7 +28,7 @@ else
 	fi
 fi
 
-if [ -f emacs-builds/Emacs-${LABEL}$VERSION-*-`sw_vers -productVersion`.* ]; then
+if ls emacs-builds/Emacs-${LABEL}$VERSION-*-`sw_vers -productVersion`.* > /dev/null 2>&1; then
 	# Already built? Done.
 	exit;
 fi
