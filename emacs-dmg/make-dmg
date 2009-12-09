@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+OUTPUT_FILE="$1"
+VOLUME_NAME="$2"
+shift;
+shift;
+
+rm -rf _dmg-build
+mkdir _dmg-build
+
+while [ x"$1" != x ]; do
+    if [[ `basename "$1"` =~ ^dot ]]; then
+        DEST=$(basename "$1" | sed -e 's/^dot-/./')
+        echo "Copying $1 -> $DEST"
+        rsync -aE "$1" "_dmg-build/$DEST"
+    else
+        echo "Copying $1"
+        rsync -aE "$1" "_dmg-build"
+    fi
+    shift;
+done
+
+SetFile -a Vc _dmg-build/background.*
+rm -f tmp.dmg
+## For Creating the initial .DSStore:
+# hdiutil create -size 200m -volname "Emacs" -fs HFS+J writable.dmg
+hdiutil makehybrid -hfs -hfs-volume-name "$VOLUME_NAME" -hfs-openfolder _dmg-build _dmg-build -o tmp.dmg
+rm -f "$OUTPUT_FILE"
+hdiutil convert -format UDZO tmp.dmg -o "$OUTPUT_FILE"
+rm -f tmp.dmg
