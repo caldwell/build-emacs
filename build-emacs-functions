@@ -27,8 +27,9 @@ function build_cocoa_emacs () {
         mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-i386.app
 
         MESSAGE="$OUT failed to build (powerpc)"
-        (cd $SRC && env CC=powerpc-apple-darwin9-gcc-4.2.1 ./configure --host=powerpc-apple-darwin --build=i386-apple-darwin --with-ns &&
-            env CC=powerpc-apple-darwin9-gcc-4.2.1 make clean install)
+        PPC_GCC=powerpc-apple-darwin10-gcc-4.2.1
+        (cd $SRC && env CC=$PPC_GCC ./configure --host=powerpc-apple-darwin --build=i386-apple-darwin --with-ns &&
+            env CC=$PPC_GCC make clean install)
 
         mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-powerpc.app
 
