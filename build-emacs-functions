@@ -3,7 +3,7 @@
 . ./notify
 
 function clean () {
-    [ x$MESSAGE != x ] && notify "$MESSAGE"
+    [ "x$MESSAGE" != x ] && notify "$MESSAGE"
 	rm -rf $SRC
 }
 
