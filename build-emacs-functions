@@ -7,16 +7,19 @@ function clean () {
 	rm -rf $SRC
 }
 
+function make_dmg () {
+    bash emacs-dmg/make-dmg "$1" Emacs emacs-dmg/Applications "$2" emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store
+}
+
 function build_cocoa_emacs () {
     (cd $SRC &&
         ./configure --with-ns &&
         make clean install)  || exit
-    (cd $SRC/nextstep &&
-        tar czf Emacs.app.tar.gz Emacs.app) || exit
+    make_dmg "$SRC/nextstep/Emacs.dmg" "$SRC/nextstep/Emacs.app" || exit
 
     if [ `uname -p`x == powerpc ]; then
-        mv $SRC/nextstep/Emacs.app.tar.gz emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.tar.gz
-        notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.tar.gz
+        mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.dmg
+        notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.dmg
     else
         notify "Successfully built native emacs."
 
@@ -37,9 +40,9 @@ function build_cocoa_emacs () {
             done)
 
         mv $SRC/nextstep/Emacs-i386.app $SRC/nextstep/Emacs.app
-        (cd $SRC/nextstep && tar czf Emacs.app.tar.gz Emacs.app)
-        mv $SRC/nextstep/Emacs.app.tar.gz emacs-builds/$OUT-universal-`sw_vers -productVersion`.tar.gz
-        notify "Successfully built universal emacs: "$OUT-universal-`sw_vers -productVersion`.tar.gz
+        make_dmg "$SRC/nextstep/Emacs.dmg" "$SRC/nextstep/Emacs.app" || exit
+        mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-universal-`sw_vers -productVersion`.dmg
+        notify "Successfully built universal emacs: "$OUT-universal-`sw_vers -productVersion`.dmg
     fi
 }
 
