@@ -11,59 +11,56 @@ function make_dmg () {
     bash emacs-dmg/make-dmg "$1" Emacs emacs-dmg/Applications "$2" emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store
 }
 
-function build_cocoa_emacs () {
-    (cd $SRC &&
-        ./configure --with-ns &&
-        make clean install)  || exit
-    make_dmg "$SRC/nextstep/Emacs.dmg" "$SRC/nextstep/Emacs.app" || exit
+function build_an_emacs() {
+    MESSAGE="$OUT failed to build ($1)"
+    (cd $SRC && env CC=$2 ./configure --host=$3 --build=i686-apple-darwin --with-ns &&
+        env CC=$2 make clean install)
 
-    if [ `uname -p`x == powerpc ]; then
-        mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.dmg
-        notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.dmg
-    else
-        notify "Successfully built native emacs."
-
-        # We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
-        mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-i386.app
-
-        MESSAGE="$OUT failed to build (powerpc)"
-        PPC_GCC=powerpc-apple-darwin10-gcc-4.2.1
-        (cd $SRC && env CC=$PPC_GCC ./configure --host=powerpc-apple-darwin --build=i386-apple-darwin --with-ns &&
-            env CC=$PPC_GCC make clean install)
-
-        mv $SRC/nextstep/Emacs.app $SRC/nextstep/Emacs-powerpc.app
-
-        (cd $SRC/nextstep/Emacs-i386.app &&
-            for f in `find Contents/MacOS -type f -print0 | xargs -n 1 -0 file | perl -ne 'print "$1\n" if /(.*): Mach-O executable/'`; do
-                echo $f;
-                lipo -create $f ../Emacs-powerpc.app/$f -output $f.universal;
-                mv -f $f.universal $f;
-            done)
-
-        mv $SRC/nextstep/Emacs-i386.app $SRC/nextstep/Emacs.app
-        make_dmg "$SRC/nextstep/Emacs.dmg" "$SRC/nextstep/Emacs.app" || exit
-        mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-universal-`sw_vers -productVersion`.dmg
-        notify "Successfully built universal emacs: "$OUT-universal-`sw_vers -productVersion`.dmg
-    fi
+    mkdir "$SRC/nextstep/$1"
+    mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$1/Emacs.app"
+    BUILT[${#BUILT[@]}]="$SRC/nextstep/$1/Emacs.app"
+    KIND[${#KIND[@]}]="$1"
 }
 
-function build_carbon_emacs () {
-    # Correct stupid bugs in the first pretest release:
-    test -f $SRC/mac/make-package || cp -p emacs-cvs-clean/mac/make-package $SRC/mac
-    test -f $SRC/mac/Emacs.app/Contents/Resources/Emacs.icns || cp -p emacs-cvs-clean/mac/Emacs.app/Contents/Resources/Emacs.icns $SRC/mac/Emacs.app/Contents/Resources/
+function lipo_2_emacs() {
+    for f in `cd $1 && find Contents/MacOS -type f -print0 | xargs -n 1 -0 file | perl -ne 'print "$1\n" if /(.*): Mach-O .*(executable|universal binary)/'`; do
+        echo "$f"
+        lipo -create "$1/$f" "$2/$f" -output "$1/$f.universal"
+        mv -f "$1/$f.universal" "$1/$f";
+    done
+}
 
-    (cd $SRC/mac && ./make-package --self-contained)
+function lipo_emacs() {
+    out=$1
+    shift
+    while [ x"$1" != x ]; do
+        lipo_2_emacs $out $1
+        shift
+    done
+    BUILT=($out)
+    KIND=(universal)
+}
 
-    mv $SRC/mac/EmacsInstaller.dmg emacs-builds/$OUT-`uname -p`-`sw_vers -productVersion`.dmg
-    notify "Successfully built native emacs: "$OUT-`uname -p`-`sw_vers -productVersion`.dmg
+function make_emacs_dmg() {
+    make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
+    mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-"$2"-`sw_vers -productVersion`.dmg
+    notify "Successfully built $2 emacs: "$OUT-"$2"-`sw_vers -productVersion`.dmg
+}
 
-    # We can cross compile powerpc code if we are on an intel. Don't know about the reverse!
-    if [ `uname -p`x == i386x ]; then
-	    MESSAGE="$OUT failed to build (powerpc)"
-	    (cd $SRC/mac && env CC=powerpc-apple-darwin8-gcc-4.0.1 ./make-package -C,--host=powerpc-apple-darwin --self-contained -C,--build=i386-apple-darwin)
-	    mv $SRC/mac/EmacsInstaller.dmg emacs-builds/$OUT-powerpc-`sw_vers -productVersion`.dmg
-	    notify "Successfully built powerpc emacs: "$OUT-powerpc-`sw_vers -productVersion`.dmg
+function build_universal_emacs() {
+    build_an_emacs intel64 gcc                              x86_64-apple-darwin
+    build_an_emacs intel32 i686-apple-darwin10-gcc-4.2.1    i686-apple-darwin
+    build_an_emacs powerpc powerpc-apple-darwin10-gcc-4.2.1 powerpc-apple-darwin
+    if [ ${#BUILT[@]} == 0 ]; then
+        return -1
     fi
+    if [ ${#BUILT[@]} -gt 1 ]; then
+        echo "Running lipo on these Emacs flavors: ${KIND[@]}"
+        lipo_emacs "${BUILT[@]}"
+    else
+        echo "Only built ${#BUILT[@]} variant of emacs. No lipo necessary."
+    fi
+    make_emacs_dmg "${BUILT[0]}" "${KIND[0]}"
 }
 
 function build_emacs () {
@@ -74,11 +71,7 @@ function build_emacs () {
 
     trap clean INT EXIT
 
-    if test -d $1/mac; then
-        build_carbon_emacs
-    else
-        build_cocoa_emacs
-    fi
+    build_universal_emacs
 
     MESSAGE=""
 
