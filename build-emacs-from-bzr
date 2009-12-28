@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+. ./notify
+. ./build-emacs-functions
+
+cd `dirname $0`
+(cd emacs-bzr/trunk && bzr pull)
+DIR=emacs-bzr/build-`date +%F`
+bzr checkout --lightweight --hardlink emacs-bzr/trunk "$DIR"
+
+build_emacs "$DIR" Emacs-`date +%F`

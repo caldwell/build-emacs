@@ -3,7 +3,7 @@ set +e
 
 cd `dirname $0`
 . ./notify
-./build-emacs-from-cvs
+./build-emacs-from-bzr
 ./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
 ./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs
 
