@@ -4,9 +4,17 @@ set -e
 . ./notify
 . ./build-emacs-functions
 
+BASE=Emacs-`date +%F`
+CHANGES=emacs-builds/$BASE.changes
+
 cd `dirname $0`
-(cd emacs-bzr/trunk && bzr pull)
+(cd emacs-bzr/trunk
+    OLDREV=`bzr revno`
+    bzr pull
+    NEWREV=`bzr revno`
+    bzr log -p -r${OLDREV}..
+)  | tee $CHANGES
 DIR=emacs-bzr/build-`date +%F`
 bzr checkout --lightweight --hardlink emacs-bzr/trunk "$DIR"
 
-build_emacs "$DIR" Emacs-`date +%F`
+build_emacs "$DIR" $BASE
