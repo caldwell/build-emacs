@@ -7,8 +7,8 @@ cd `dirname $0`
 ./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
 ./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs
 
-# At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my local server
-# and my high-bandwidth mirror (sending growl notifications each time) and then adjusted the permissions such
-# that the http daemon could write to the directory (my original site had reddit style thumbs up/down voting
-# on each build and votes were stored in the build dir). I've redacted this part because it had a lot of
-# server, user and directory names.
+# At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my
+# high-bandwidth mirror and then my local server (sending growl notifications each time) and then adjusted the
+# permissions such that the http daemon could write to the directory (my original site had reddit style thumbs
+# up/down voting on each build and votes were stored in the build dir). I've redacted this part because it had
+# a lot of server, user and directory names.
