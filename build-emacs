@@ -1,11 +1,17 @@
 #!/bin/sh
 set +e
 
+for b in ${*:-bzr pretest release}; do
+    b=${b##-}
+    b=${b##--}
+    eval build_$b=1
+done
+
 cd `dirname $0`
 . ./notify
-./build-emacs-from-bzr
-./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
-./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs
+[ ${build_bzr}     ] && ./build-emacs-from-bzr
+[ ${build_pretest} ] && ./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest
+[ ${build_release} ] && ./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs
 
 # At this point the original script loaded my .bashrc, rsynced the emacs-builds/ directory to my
 # high-bandwidth mirror and then my local server (sending growl notifications each time) and then adjusted the
