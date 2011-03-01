@@ -1,6 +1,12 @@
 #!/bin/sh
 set +e
 
+if [[ ${*} == *help* ]]; then
+    echo "Usage:"
+    printf "\t$0 [bzr] [pretest] [release]\n"
+    exit;
+fi
+
 for b in ${*:-bzr pretest release}; do
     b=${b##-}
     b=${b##--}
