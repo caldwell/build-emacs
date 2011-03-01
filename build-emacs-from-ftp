@@ -35,7 +35,8 @@ fi
 
 (cd ftp-versions && tar xzf $LATEST)
 
-DIR=`echo ftp-versions/$LATEST | sed -e 's/.tar.gz$//'`
+DIR=ftp-versions/$LATEST
+DIR=${DIR%%.tar.gz}
 
 build_emacs "$DIR" "Emacs-${LABEL}$VERSION"
 
