@@ -33,10 +33,10 @@ if ls emacs-builds/Emacs-${LABEL}$VERSION-*-*.* > /dev/null 2>&1; then
 	exit;
 fi
 
-(cd ftp-versions && tar xzf $LATEST)
-
 DIR=ftp-versions/$LATEST
 DIR=${DIR%%.tar.gz}
+
+tar xzf ftp-versions/$LATEST -s ",^[^/]*,$DIR,"
 
 build_emacs "$DIR" "Emacs-${LABEL}$VERSION"
 
