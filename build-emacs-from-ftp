@@ -16,7 +16,7 @@ eval `curl -s "$FTP_DIR_URL/" | perl -MSort::Versions -ne 'push @v, { s=>$1, d=>
 # Prevent clean() from removing the whole directory when the above regular expression fails. Grrrrr.
 if [ x$LATEST = x ]; then
 	echo "Error retrieving latest version number from $FTP_DIR_URL." 1>&2
-	exit
+	exit 1
 fi
 
 mkdir -p ftp-versions
@@ -31,7 +31,7 @@ fi
 
 if ls emacs-builds/Emacs-${LABEL}$VERSION-*-*.* > /dev/null 2>&1; then
 	# Already built? Done.
-	exit;
+	exit 2
 fi
 
 DIR=ftp-versions/$LATEST
