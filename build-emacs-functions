@@ -16,10 +16,11 @@ function build_an_emacs() {
     ARCH="$1"
     GCC="$2"
     HOST="$3"
+    MIN_OS="$4"
     MESSAGE="$OUT failed to build ($ARCH)"
     (cd $SRC && test -f ./configure || ./autogen.sh || ./autogen/copy_autogen)
-    (cd $SRC && env CC="$GCC -mmacosx-version-min=10.5" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
-        env CC="$GCC -mmacosx-version-min=10.5" make clean install)
+    (cd $SRC && env CC="$GCC -mmacosx-version-min=$MIN_OS" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
+        env CC="$GCC -mmacosx-version-min=$MIN_OS" make clean install)
 
     mkdir "$SRC/nextstep/$ARCH"
     mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$ARCH/Emacs.app"
@@ -53,9 +54,9 @@ function make_emacs_dmg() {
 }
 
 function build_universal_emacs() {
-    build_an_emacs intel64 gcc                              x86_64-apple-darwin
-    build_an_emacs intel32 i686-apple-darwin10-gcc-4.2.1    i686-apple-darwin
-    build_an_emacs powerpc powerpc-apple-darwin10-gcc-4.2.1 powerpc-apple-darwin
+    build_an_emacs intel64 gcc                              x86_64-apple-darwin  10.5
+    build_an_emacs intel32 i686-apple-darwin10-gcc-4.2.1    i686-apple-darwin    10.5
+    build_an_emacs powerpc powerpc-apple-darwin10-gcc-4.2.1 powerpc-apple-darwin 10.5
     if [ ${#BUILT[@]} == 0 ]; then
         return -1
     fi
