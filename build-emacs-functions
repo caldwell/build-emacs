@@ -56,7 +56,7 @@ function make_emacs_dmg() {
 function build_universal_emacs() {
     build_an_emacs intel64 gcc                              x86_64-apple-darwin  10.5
     build_an_emacs intel32 i686-apple-darwin10-gcc-4.2.1    i686-apple-darwin    10.5
-    build_an_emacs powerpc powerpc-apple-darwin10-gcc-4.2.1 powerpc-apple-darwin 10.5
+    build_an_emacs powerpc powerpc-apple-darwin10-gcc-4.2.1 powerpc-apple-darwin 10.4
     if [ ${#BUILT[@]} == 0 ]; then
         return -1
     fi
