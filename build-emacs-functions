@@ -13,14 +13,17 @@ function make_dmg () {
 }
 
 function build_an_emacs() {
-    MESSAGE="$OUT failed to build ($1)"
-    (cd $SRC && env CC="$2 -mmacosx-version-min=10.5" ./configure --host=$3 --build=i686-apple-darwin --with-ns &&
-        env CC="$2 -mmacosx-version-min=10.5" make clean install)
+    ARCH="$1"
+    GCC="$2"
+    HOST="$3"
+    MESSAGE="$OUT failed to build ($ARCH)"
+    (cd $SRC && env CC="$GCC -mmacosx-version-min=10.5" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
+        env CC="$GCC -mmacosx-version-min=10.5" make clean install)
 
-    mkdir "$SRC/nextstep/$1"
-    mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$1/Emacs.app"
-    BUILT[${#BUILT[@]}]="$SRC/nextstep/$1/Emacs.app"
-    KIND[${#KIND[@]}]="$1"
+    mkdir "$SRC/nextstep/$ARCH"
+    mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$ARCH/Emacs.app"
+    BUILT[${#BUILT[@]}]="$SRC/nextstep/$ARCH/Emacs.app"
+    KIND[${#KIND[@]}]="$ARCH"
 }
 
 function lipo_2_emacs() {
