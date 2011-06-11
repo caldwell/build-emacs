@@ -38,7 +38,7 @@ DIR=${DIR%%.tar.gz}
 
 tar xzf ftp-versions/$LATEST -s ",^[^/]*,$DIR,"
 
-build_emacs "$DIR" "Emacs-${LABEL}$VERSION"
+build_emacs "$DIR" "Emacs-${LABEL}$VERSION" || exit $?
 
 TOUCHDATE=`perl -MPOSIX -MDate::Parse -e 'print strftime "%Y%m%d%H%M.%S", localtime str2time '"'$DATE';"`
 

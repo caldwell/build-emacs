@@ -79,10 +79,13 @@ function build_emacs () {
     trap clean INT EXIT
 
     build_universal_emacs
+    ERR=$?
 
     MESSAGE=""
 
     trap "" INT EXIT
 
     clean
+
+    return $ERR
 }
