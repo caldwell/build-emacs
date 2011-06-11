@@ -4,7 +4,8 @@
 
 function clean () {
     [ "x$MESSAGE" != x ] && notify "$MESSAGE"
-	rm -rf $SRC
+    rm -rf $SRC
+    rm -f .building
 }
 
 function make_dmg () {
@@ -68,6 +69,12 @@ function build_emacs () {
     OUT="$2"
 
     MESSAGE="$OUT build failed (native)"
+
+    if [ -f .building ]; then
+        echo "Already building an emacs or $PWD/.building is stale"
+        return -2
+    fi
+    echo $$ >> .building
 
     trap clean INT EXIT
 
