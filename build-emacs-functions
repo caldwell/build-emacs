@@ -17,6 +17,7 @@ function build_an_emacs() {
     GCC="$2"
     HOST="$3"
     MESSAGE="$OUT failed to build ($ARCH)"
+    (cd $SRC && test -f ./configure || ./autogen.sh || ./autogen/copy_autogen)
     (cd $SRC && env CC="$GCC -mmacosx-version-min=10.5" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
         env CC="$GCC -mmacosx-version-min=10.5" make clean install)
 
