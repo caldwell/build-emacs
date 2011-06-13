@@ -16,9 +16,9 @@ done
 cd `dirname $0`
 . ./notify
 # If we're running from cron we probably need some paths set up (for bzr at least)
--f ~/.bashrc && . ~/.bashrc
+[ -f ~/.bashrc ] && . ~/.bashrc
 [ ${build_bzr}     ] && ./build-emacs-from-bzr && built=1
 [ ${build_pretest} ] && ./build-emacs-from-ftp ftp://alpha.gnu.org/gnu/emacs/pretest pretest && built=1
 [ ${build_release} ] && ./build-emacs-from-ftp ftp://ftp.gnu.org/gnu/emacs && built=1
 
--f build-emacs-post-hook && ./build-emacs-post-hook $built
+[ -f build-emacs-post-hook ] && ./build-emacs-post-hook $built
