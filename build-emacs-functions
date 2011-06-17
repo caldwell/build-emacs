@@ -47,9 +47,18 @@ function lipo_emacs() {
     KIND=(universal)
 }
 
+function link_or_copy() {
+    # This uses ln to detect if the dest is on another filesystem. I
+    # can't use mv because when moving to an appleshare the mac mv
+    # always fails when setting the permissions, even though the file
+    # already moved (so there's no way to distinguish between that and
+    # a real error).
+    ln "$1" "$2" 2> /dev/null || cp -a "$1" "$2"
+}
+
 function make_emacs_dmg() {
     make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
-    mv $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-"$2"-`sw_vers -productVersion`.dmg
+    link_or_copy $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-"$2"-`sw_vers -productVersion`.dmg
     notify "Successfully built $2 emacs: "$OUT-"$2"-`sw_vers -productVersion`.dmg
 }
 
