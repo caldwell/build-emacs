@@ -1,5 +1,5 @@
+# -*- sh -*-
 function notify() {
     which growlnotify > /dev/null || return 0
     growlnotify --appIcon Emacs.app --message "$1"
 }
-
