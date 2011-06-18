@@ -1,0 +1,100 @@
+Emacs Build Script
+------------------
+
+This is the emacs build script that produces the builds at
+http://emacsformacosx.com/.
+
+Prerequisites
+~~~~~~~~~~~~~
+
+Hardware Requirements
++++++++++++++++++++++
+
+*Most importantly, the script will only run on a 64 bit Intel Macintosh
+running Mac OS X 10.6 (Snow Leopard)*.
+
+The reason is this: The script tries to build a universal binary that runs
+on 32 bit Intel, 64 bit Intel, and PowerPC processors. Because of Emacs's
+undump procedure it has to be run on a machine that can run all of those
+architectures. Right now this means a 64 bit Intel Macintosh running Mac OS
+X 10.6. If you want to run 10.5 (which can't run 64 bit applications that
+use Carbon or Cocoa) or you have an 32 bit processor then you'll have to
+comment out the 64 bit parts. If you want to run on 10.7 (Lion) then you
+will have to comment out the PowerPC parts, as they are removing PowerPC
+emulation from the OS. Both of these lines are in build-emacs-functions
+file, in the build_universal_emacs() function.
+
+Baazar
+++++++
+
+Baazar does not come with Mac OS X by default. You will need to install it
+if you want to build from the GNU bzr repo. The easiest way is probably to
+install "homebrew" (http://mxcl.github.com/homebrew/) and then do "brew
+install bzr".
+
+Sort::Versions
+++++++++++++++
+
+If you want to build from FTP then you will also need a Perl CPAN module
+called "Sort::Versions". You can istall it with "cpan -i Sort::Versions".
+
+Growl
++++++
+
+It's not really a prerequisite, but if you have Growl installed (and in
+particular the "growlnotify" command line utility) then the script will send
+some notifications about what it is doing. If you don't have Growl installed
+then it will work just fine too.
+
+Usage
+~~~~~
+
+The "build-emacs" script was designed to be run from cron, though you can
+run it by hand too.
+
+My crontab entry tells the script to build the bzr, release and pretest
+versions once a day and looks something like this:
+
+  @daily     $HOME/emacs-build-directory/build-emacs bzr release pretest
+
+If you just want to build releases then remove the "bzr" and "pretest"
+arguments.
+
+Output
+++++++
+
+The resulting .dmg files will be put in the "emacs-builds/" directory. If
+you built a "bzr" version then a *.changes file will also be put in the
+"emacs-builds/" directory. This file contains a diff of the emacs source
+code from the last time you ran "build-emacs".
+
+State Directories
++++++++++++++++++
+
+The script creates a "emacs-bzr" directory when building the "bzr"
+version. The first time you build, it has to do an initial checkout from the
+Emacs Baazar repository which can take a really long time.
+
+The script creates a "ftp-versions" directory to store the tarballs it
+downloads from the GNU ftp site. It will download the latest version into
+this directory unless it already exists.
+
+Neither of these directories are not expected to be deleted between
+invocations.
+
+Lock File
++++++++++
+
+The script creates a file called ".building" when it starts the build. This
+is to prevent multiple parallel builds which can happen if the cron interval
+is set to low. It should clear itself automatically but if you get an error
+about "Already building an emacs" and you know that it isn't true then you
+should delete the lock file.
+
+License
+~~~~~~~
+
+Copyright © 2004-2011 David Caldwell <david@porkrind.org>
+
+The scripts and programs contained in this distribution are licensed under
+the GNU General Public License (v3.0). See the LICENSE file for details.
