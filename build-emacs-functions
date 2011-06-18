@@ -9,6 +9,12 @@ function clean () {
 }
 
 function make_dmg () {
+    if [ ! -f "emacs-dmg/More.../Alternative Icon" ]; then
+        # Git (or anything really) can't store resource forks. So compile the resource fork from scratch:
+        Rez -o "emacs-dmg/More.../Alternative Icon" emacs-dmg/icon.r
+        # Set the finder info bit that says the file has a custom icon.
+        xattr -x -w com.apple.FinderInfo "00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" "emacs-dmg/More.../Alternative Icon"
+    fi
     bash emacs-dmg/make-dmg "$1" Emacs emacs-dmg/Applications "$2" emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store
 }
 
