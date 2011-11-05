@@ -15,7 +15,7 @@ function make_dmg () {
         # Set the finder info bit that says the file has a custom icon.
         xattr -x -w com.apple.FinderInfo "00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" "emacs-dmg/More.../Alternative Icon"
     fi
-    bash emacs-dmg/make-dmg "$1" Emacs emacs-dmg/Applications "$2" emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store
+    bash emacs-dmg/make-dmg "$1" Emacs emacs-dmg/Applications "$2" emacs-dmg/Heroes.rtf emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store
 }
 
 function build_an_emacs() {
