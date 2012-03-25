@@ -4,8 +4,12 @@
 
 function clean () {
     [ "x$MESSAGE" != x ] && notify "$MESSAGE"
-    rm -rf $SRC
-    rm -f .building
+    rm -rf "${CLEAN[@]}"
+    CLEAN=()
+}
+
+function clean_up() {
+    CLEAN[${#CLEAN[@]}]="$1"
 }
 
 function make_dmg () {
@@ -95,6 +99,8 @@ function build_emacs () {
         return -2
     fi
     echo $$ >> .building
+    clean_up .building
+    clean_up "$SRC"
 
     trap clean INT EXIT
 
