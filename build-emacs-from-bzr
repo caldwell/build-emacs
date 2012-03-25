@@ -17,12 +17,12 @@ if [ ! -d emacs-bzr/trunk ]; then
 fi
 
 (cd emacs-bzr/trunk
-    OLDREV=`bzr revno`
+    OLDREV=$(bzr revno)
     bzr pull $REPO
-    NEWREV=`bzr revno`
     bzr log -p -r${OLDREV}..
 )  | tee $CHANGES
+NEWREV=$(bzr revno $REPO)
 DIR=emacs-bzr/build-`date +%F`
 bzr checkout --lightweight --hardlink emacs-bzr/trunk "$DIR"
 
-build_emacs "$DIR" $BASE
+build_emacs "$DIR" $BASE-$NEWREV
