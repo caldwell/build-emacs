@@ -68,8 +68,9 @@ function link_or_copy() {
 
 function make_emacs_dmg() {
     make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
-    link_or_copy $SRC/nextstep/Emacs.dmg emacs-builds/$OUT-"$2"-`sw_vers -productVersion`.dmg
-    notify "Successfully built $2 emacs: "$OUT-"$2"-`sw_vers -productVersion`.dmg
+    NAME=$OUT-"$2"-`sw_vers -productVersion`.dmg
+    link_or_copy $SRC/nextstep/Emacs.dmg emacs-builds/$NAME
+    notify "Successfully built $2 emacs: $NAME"
 }
 
 function build_universal_emacs() {
