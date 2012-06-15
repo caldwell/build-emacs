@@ -20,14 +20,14 @@ architectures. Right now this means a 64 bit Intel Macintosh running Mac OS
 X 10.6. If you want to run 10.5 (which can't run 64 bit applications that
 use Carbon or Cocoa) or you have an 32 bit processor then you'll have to
 comment out the 64 bit parts. If you want to run on 10.7 (Lion) then you
-will have to comment out the PowerPC parts, as they are removing PowerPC
+will have to comment out the PowerPC parts, as Apple removed PowerPC
 emulation from the OS. Both of these lines are in build-emacs-functions
 file, in the build_universal_emacs() function.
 
 Baazar
 ++++++
 
-Baazar does not come with Mac OS X by default. You will need to install it
+Baazar is not installed on Mac OS X by default. You will need to install it
 if you want to build from the GNU bzr repo. The easiest way is probably to
 install "homebrew" (http://mxcl.github.com/homebrew/) and then do "brew
 install bzr".
@@ -79,8 +79,7 @@ The script creates a "ftp-versions" directory to store the tarballs it
 downloads from the GNU ftp site. It will download the latest version into
 this directory unless it already exists.
 
-Neither of these directories are not expected to be deleted between
-invocations.
+Neither of these directories should be deleted between invocations.
 
 Lock File
 +++++++++
@@ -94,7 +93,7 @@ should delete the lock file.
 License
 ~~~~~~~
 
-Copyright © 2004-2011 David Caldwell <david@porkrind.org>
+Copyright © 2004-2012 David Caldwell <david@porkrind.org>
 
 The scripts and programs contained in this distribution are licensed under
 the GNU General Public License (v3.0). See the LICENSE file for details.
