@@ -69,6 +69,7 @@ function link_or_copy() {
 function make_emacs_dmg() {
     make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
     NAME=$OUT-"$2"-`sw_vers -productVersion`.dmg
+    mkdir -p emacs-builds
     link_or_copy $SRC/nextstep/Emacs.dmg emacs-builds/$NAME
     notify "Successfully built $2 emacs: $NAME"
 }
