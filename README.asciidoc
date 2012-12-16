@@ -67,7 +67,7 @@ versions once a day and looks something like this:
 If you just want to build releases then remove the "bzr" and "pretest"
 arguments.
 
-If the 'XCODE_10_7_PATH' environment variable is set the path of a recent
+If the 'XCODE_10_7_PATH' environment variable is set to the path of a recent
 Xcode.app, then the script will compile a special Lion/Mountain Lion only
 version of Emacs in addition to the normal Universal Binary. A small
 launcher will be installed as the main executable and it will exec the
