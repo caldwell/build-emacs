@@ -27,9 +27,10 @@ function build_an_emacs() {
     GCC="$2"
     HOST="$3"
     MIN_OS="$4"
+    EXTRA_GCC_OPTIONS="$5"
     MESSAGE="$OUT failed to build ($ARCH)"
     (cd $SRC && test -f ./configure || ./autogen.sh || ./autogen/copy_autogen)
-    (cd $SRC && env CC="$GCC -mmacosx-version-min=$MIN_OS" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
+    (cd $SRC && env CC="$GCC -mmacosx-version-min=$MIN_OS $EXTRA_GCC_OPTIONS" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
         env CC="$GCC -mmacosx-version-min=$MIN_OS" make clean install)
 
     mkdir "$SRC/nextstep/$ARCH"
@@ -86,6 +87,17 @@ function build_universal_emacs() {
     else
         echo "Only built ${#BUILT[@]} variant of emacs. No lipo necessary."
     fi
+
+    if test -n "$XCODE_10_7_PATH"; then
+	DEVELOPER_PATH="$XCODE_10_7_PATH/Contents/Developer"
+	SDK_PATH="$DEVELOPER_PATH/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk"
+	PATH=$DEVELOPER_PATH/usr/bin:$PATH build_an_emacs intel64-lion gcc x86_64-apple-darwin 10.7 "-isystem $SDK_PATH/usr/include/ -F$SDK_PATH/System/Library/Frameworks"
+
+	mv    "${BUILT[0]}/Contents/MacOS/Emacs"      "${BUILT[0]}/Contents/MacOS/Emacs-10.4"
+	cp -a "${BUILT[1]}/Contents/MacOS/Emacs"      "${BUILT[0]}/Contents/MacOS/Emacs-10.7"
+	cp -a launch.rb                               "${BUILT[0]}/Contents/MacOS/Emacs"
+    fi
+
     make_emacs_dmg "${BUILT[0]}" "${KIND[0]}"
 }
 
