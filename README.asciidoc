@@ -26,7 +26,7 @@ file, in the build_universal_emacs() function.
 
 You *can* compile for Lion without running on Lion or Mountain Lion. If you
 copy a recent Xcode.app to your Snow Leopard build machine then you can
-point to it with the environment variable "XCODE_10_7_PATH" and the script
+point to it with the environment variable 'XCODE_10_7_PATH' and the script
 will automatically make an executable than can have special Lion only
 features (currently this means Lion full screen support and better retina
 display support).
