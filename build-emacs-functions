@@ -68,6 +68,13 @@ function link_or_copy() {
     ln "$1" "$2" 2> /dev/null || cp -a "$1" "$2"
 }
 
+function sign_emacs() {
+    APP="$1"
+    if test -n "$CODE_SIGNER"; then
+	codesign -s "$CODE_SIGNER" "$APP"
+    fi
+}
+
 function make_emacs_dmg() {
     make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
     NAME=$OUT-"$2"-`sw_vers -productVersion`.dmg
@@ -99,6 +106,8 @@ function build_universal_emacs() {
 	cp -a "${BUILT[1]}/Contents/MacOS/Emacs"      "${BUILT[0]}/Contents/MacOS/Emacs-10.7"
 	cp -a launch.rb                               "${BUILT[0]}/Contents/MacOS/Emacs"
     fi
+
+    sign_emacs "${BUILT[0]}"
 
     make_emacs_dmg "${BUILT[0]}" "${KIND[0]}"
 }

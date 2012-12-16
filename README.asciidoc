@@ -73,6 +73,10 @@ version of Emacs in addition to the normal Universal Binary. A small
 launcher will be installed as the main executable and it will exec the
 appropriate binary.
 
+If the 'CODE_SIGNER' environment variable is set then the script will
+sign the app with a call to codesign, passing the 'CODE_SIGNER'
+variable as the argument for the "-s" option.
+
 Output
 ++++++
 
