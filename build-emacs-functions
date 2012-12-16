@@ -29,13 +29,14 @@ function build_an_emacs() {
     MIN_OS="$4"
     EXTRA_GCC_OPTIONS="$5"
     MESSAGE="$OUT failed to build ($ARCH)"
-    (cd $SRC && test -f ./configure || ./autogen.sh || ./autogen/copy_autogen)
+    (cd $SRC && test -f ./configure || ./autogen.sh || ./autogen/copy_autogen) &&
     (cd $SRC && env CC="$GCC -mmacosx-version-min=$MIN_OS $EXTRA_GCC_OPTIONS" ./configure --host=$HOST --build=i686-apple-darwin --with-ns &&
-        env CC="$GCC -mmacosx-version-min=$MIN_OS" make clean install)
+        env CC="$GCC -mmacosx-version-min=$MIN_OS" make clean install) &&
 
-    mkdir "$SRC/nextstep/$ARCH"
-    mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$ARCH/Emacs.app"
-    BUILT[${#BUILT[@]}]="$SRC/nextstep/$ARCH/Emacs.app"
+    rm -rf "$SRC/nextstep/$ARCH" &&
+    mkdir "$SRC/nextstep/$ARCH" &&
+    mv "$SRC/nextstep/Emacs.app" "$SRC/nextstep/$ARCH/Emacs.app" &&
+    BUILT[${#BUILT[@]}]="$SRC/nextstep/$ARCH/Emacs.app" &&
     KIND[${#KIND[@]}]="$ARCH"
 }
 
@@ -70,6 +71,7 @@ function link_or_copy() {
 function make_emacs_dmg() {
     make_dmg "$SRC/nextstep/Emacs.dmg" "$1" || exit
     NAME=$OUT-"$2"-`sw_vers -productVersion`.dmg
+    mkdir -p emacs-builds
     link_or_copy $SRC/nextstep/Emacs.dmg emacs-builds/$NAME
     notify "Successfully built $2 emacs: $NAME"
 }
