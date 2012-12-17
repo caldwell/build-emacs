@@ -17,11 +17,11 @@ The reason is this: The script tries to build a universal binary that runs
 on 32 bit Intel, 64 bit Intel, and PowerPC processors. Because of Emacs's
 undump procedure it has to be run on a machine that can run all of those
 architectures. Right now this means a 64 bit Intel Macintosh running Mac OS
-X 10.6. If you want to run 10.5 (which can't run 64 bit applications that
-use Carbon or Cocoa) or you have an 32 bit processor then you'll have to
-comment out the 64 bit parts. If you want to run this script on 10.7 (Lion)
-then you will have to comment out the PowerPC parts, as Apple removed
-PowerPC emulation from the OS. Both of these lines are in
+X 10.6. If you want to build emacs on 10.5 (which can't run 64 bit
+applications that use Carbon or Cocoa) or you have an 32 bit processor then
+you'll have to comment out the 64 bit parts. If you want to build emacs on
+10.7 (Lion) then you will have to comment out the PowerPC parts, as Apple
+removed PowerPC emulation from the OS. Both of these lines are in
 build-emacs-functions file, in the build_universal_emacs() function.
 
 You *can* compile for Lion without running on Lion or Mountain Lion. If you
