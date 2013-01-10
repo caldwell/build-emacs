@@ -27,5 +27,5 @@ rm -f tmp.dmg
 # hdiutil create -size 200m -volname "Emacs" -fs HFS+J writable.dmg
 hdiutil makehybrid -hfs -hfs-volume-name "$VOLUME_NAME" -hfs-openfolder _dmg-build _dmg-build -o tmp.dmg
 rm -f "$OUTPUT_FILE"
-hdiutil convert -format UDZO tmp.dmg -o "$OUTPUT_FILE"
+hdiutil convert -format UDBZ tmp.dmg -o "$OUTPUT_FILE"
 rm -f tmp.dmg
