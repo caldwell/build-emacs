@@ -39,6 +39,12 @@ if you want to build from the GNU bzr repo. The easiest way is probably to
 install "homebrew" (http://mxcl.github.com/homebrew/) and then do "brew
 install bzr".
 
+XZ
+++
+
+Recent Emacs pretests are being distributed in tar.xz format. You will
+need the "xz" program to build them: "brew install xz"
+
 Sort::Versions
 ++++++++++++++
 
