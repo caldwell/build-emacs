@@ -9,7 +9,7 @@ def osascript(script)
 end
 
 
-versions = Hash[Dir["#{$0}-*"].map { |file| [ numify(file.sub(/^.*-(.+)$/, '\1')), file] }]
+versions = Hash[*Dir["#{$0}-*"].map { |file| [ numify(file.sub(/^.*-(.+)$/, '\1')), file] }.flatten]
 version = numify(`sw_vers -productVersion`)
 if highest_compatible_version =  versions.keys.select { |v| v <= version }.max
   exec versions[highest_compatible_version], *ARGV
