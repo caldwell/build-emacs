@@ -16,6 +16,8 @@ if [ ! -d emacs-bzr/trunk ]; then
     )
 fi
 
+mkdir -p emacs-builds
+
 (cd emacs-bzr/trunk
     OLDREV=$(bzr revno)
     bzr pull $REPO
