@@ -40,7 +40,7 @@ DIR=${DIR%%.tar.xz}
 CAT=gzcat
 [[ $LATEST =~ \.xz$ ]] && CAT=xzcat
 
-$CAT ftp-versions/$LATEST | tar x -s ",^[^/]*,$DIR,"
+$CAT ftp-versions/$LATEST | /usr/bin/tar x -s ",^[^/]*,$DIR,"
 
 build_emacs "$DIR" "Emacs-${LABEL}$VERSION" || exit $?
 
