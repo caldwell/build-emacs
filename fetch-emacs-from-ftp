@@ -4,7 +4,7 @@ set -e
 FTP_DIR_URL=${1:?"1st arg should be an ftp url"}
 
 eval $(ruby -e '
-  URL="'"$FTP_DIR_URL"'"
+  URL="'"$FTP_DIR_URL"'".sub(%r{([^/])$}, "\\1/")
   #DIR="/home/david/www-emacs/emacs-sources"
   version = []
   # IO.popen(["lftp", URL, "-e", "cls -1; exit"]) do |io|
