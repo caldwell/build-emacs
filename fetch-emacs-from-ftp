@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+FTP_DIR_URL=${1:?"1st arg should be an ftp url"}
+
+eval $(ruby -e '
+  URL="'"$FTP_DIR_URL"'"
+  #DIR="/home/david/www-emacs/emacs-sources"
+  version = []
+  # IO.popen(["lftp", URL, "-e", "cls -1; exit"]) do |io|
+  #   while io.gets
+  #     $_.chomp!
+  #     if /emacs-[^\d]*([\d.]+)\.tar\.[gx]z$/
+  #       version.push( { :version=>Gem::Version.new($1), :file=>$_, :url => URL+$_ } )
+  #     end
+  #   end
+  # end
+  IO.popen(["curl", "-s", URL]) do |io|
+    while io.gets
+      $_.chomp!
+      if /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)/
+        version.push( { :version=>Gem::Version.new($4), :file=>$3, :date=>$2, :size=>$1, :url => URL+$3 } )
+      end
+    end
+  end
+
+  latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
+  base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
+  puts "LATEST=\"#{latest[:url]}\""
+  puts "VERSION=\"#{latest[:version]}\""
+  puts "DATE=\"#{latest[:date]}\""
+  puts "SIZE=\"#{latest[:size]}\""
+ ')
+
+curl --continue-at - --silent -O "$LATEST"
