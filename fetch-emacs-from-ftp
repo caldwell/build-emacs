@@ -30,6 +30,12 @@ eval $(ruby -e '
   puts "VERSION=\"#{latest[:version]}\""
   puts "DATE=\"#{latest[:date]}\""
   puts "SIZE=\"#{latest[:size]}\""
+  puts "FILE=\"#{latest[:file]}\""
  ')
 
 curl --continue-at - --silent -O "$LATEST"
+
+# Old Mac OS Versions don't have .xz support. Rather than requiring installing it, just convert to .bz2 which *is* supported.
+NEWFILE=$(basename $FILE .xz).bz2
+xzcat $FILE | bzip2 > "$NEWFILE"
+rm -f "$FILE"
