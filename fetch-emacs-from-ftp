@@ -1,41 +1,44 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env ruby
 
-FTP_DIR_URL=${1:?"1st arg should be an ftp url"}
+require 'optparse'
+require 'shell'
 
-eval $(ruby -e '
-  URL="'"$FTP_DIR_URL"'".sub(%r{([^/])$}, "\\1/")
-  #DIR="/home/david/www-emacs/emacs-sources"
-  version = []
-  # IO.popen(["lftp", URL, "-e", "cls -1; exit"]) do |io|
-  #   while io.gets
-  #     $_.chomp!
-  #     if /emacs-[^\d]*([\d.]+)\.tar\.[gx]z$/
-  #       version.push( { :version=>Gem::Version.new($1), :file=>$_, :url => URL+$_ } )
-  #     end
-  #   end
-  # end
-  IO.popen(["curl", "-s", URL]) do |io|
-    while io.gets
-      $_.chomp!
-      if /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)/
-        version.push( { :version=>Gem::Version.new($4), :file=>$3, :date=>$2, :size=>$1, :url => URL+$3 } )
-      end
+(opts=OptionParser.new do |opts|
+  opts.banner = "Usage:\n\t#{$0} <URL> [options]"
+  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| verbose += 1 }
+  opts.on_tail("-h", "--help") { puts opts; exit }
+end).parse!
+
+url=ARGV.shift || opts.abort("Missing <URL>\n\n"+opts.help)
+
+url=url.sub(%r{([^/])$}, "\\1/")
+
+version = []
+# IO.popen(["lftp", url, "-e", "cls -1; exit"]) do |io|
+#   while io.gets
+#     $_.chomp!
+#     if /emacs-[^\d]*([\d.]+)\.tar\.[gx]z$/
+#       version.push( { :version=>Gem::Version.new($1), :file=>$_, :url => url+$_ } )
+#     end
+#   end
+# end
+IO.popen(["curl", "-s", url]) do |io|
+  while io.gets
+    $_.chomp!
+    if $_ =~ /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)/
+      version.push( { :version=>Gem::Version.new($4), :file=>$3, :date=>$2, :size=>$1, :url => url+$3 } )
     end
   end
+end
 
-  latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
-  base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
-  puts "LATEST=\"#{latest[:url]}\""
-  puts "VERSION=\"#{latest[:version]}\""
-  puts "DATE=\"#{latest[:date]}\""
-  puts "SIZE=\"#{latest[:size]}\""
-  puts "FILE=\"#{latest[:file]}\""
- ')
+latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
+base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
 
-curl --continue-at - --silent -O "$LATEST"
+system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
 
 # Old Mac OS Versions don't have .xz support. Rather than requiring installing it, just convert to .bz2 which *is* supported.
-NEWFILE=$(basename $FILE .xz).bz2
-xzcat $FILE | bzip2 > "$NEWFILE"
-rm -f "$FILE"
+newfile=File.basename(latest[:file], '.xz')+'.bz2'
+sh=Shell.new
+sh.system(*(%W(xzcat #{latest[:file]}))) | sh.system('bzip2') > newfile
+
+File.unlink(latest[:file])
