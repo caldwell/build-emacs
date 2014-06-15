@@ -51,15 +51,20 @@ def combine(tars, out_app)
 end
 
 def code_sign(app, signer)
-  # HACK: Work around problem with Mac OS X's codesign script detection. It doesn't detect "#! /usr/bin/perl" correctly. :-(
-  Find.find(File.join(app, "Contents/MacOS")) do |path|
-    next unless File.file?(path) && File.executable?(path)
-    if IO.read(path, 4) == '#! /'
-      puts "Fixing '#! /' in #{path}"
-      IO.write(path, IO.read(path).sub!(%r'^#! /','#!/'))
+  # Old OSes can't handle --deep code signing.
+  if Gem::Version.new(`sw_vers -productVersion`) < Gem::Version.new('10.8.0')
+    Vsh.system *%W"codesign --sign #{signer} #{app}"
+  else
+    # HACK: Work around problem with Mac OS X's codesign script detection. It doesn't detect "#! /usr/bin/perl" correctly. :-(
+    Find.find(File.join(app, "Contents/MacOS")) do |path|
+      next unless File.file?(path) && File.executable?(path)
+      if IO.read(path, 4) == '#! /'
+        puts "Fixing '#! /' in #{path}"
+        IO.write(path, IO.read(path).sub!(%r'^#! /','#!/'))
+      end
     end
+    Vsh.system *%W"codesign --deep --sign #{signer} #{app}"
   end
-  Vsh.system *%W"codesign --deep --sign #{signer} #{app}"
 end
 
 def make_dmg(out_dmg, app)
