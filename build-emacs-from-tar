@@ -3,7 +3,7 @@
 require 'optparse'
 require 'shell'
 require 'fileutils'
-require './build-emacs.rb'
+require File.join ".",File.dirname(__FILE__),'build-emacs.rb'
 
 verbose = 0
 (opts=OptionParser.new do |opts|
