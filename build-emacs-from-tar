@@ -27,6 +27,6 @@ sh.pushd src_dir
 sh.system(*(%W(tar xf #{"../"+source_tar} --strip-components=1))) > STDOUT
 sh.popd
 
-binary = build_emacs src_dir, "Emacs-#{label}#{version}-`sw_vers -productVersion`-`uname -m`", :verbose => verbose > 0
+binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{`sw_vers -productVersion`}-#{`uname -m`}", :verbose => verbose > 0
 
 puts "Built #{binary}"
