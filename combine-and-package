@@ -4,6 +4,7 @@ require 'optparse'
 require 'shell'
 require 'fileutils'
 require 'find'
+require 'rubygems'
 $script_base = File.join ".",File.dirname(__FILE__)
 require File.join($script_base,'verbose-shell.rb')
 Vsh = VerboseShell
