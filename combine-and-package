@@ -1,0 +1,89 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'shell'
+require 'fileutils'
+require 'find'
+$script_base = File.join ".",File.dirname(__FILE__)
+require File.join($script_base,'verbose-shell.rb')
+Vsh = VerboseShell
+
+def combine(tars, out_app)
+  base = nil
+  emacsen = tars.map { |tarball_path|
+    dir = File.dirname tarball_path
+    tarball = File.basename tarball_path
+    tarball =~ /^(Emacs(-pretest)?-([\d.]+))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
+    base ||= $1
+    abort "bases don't match: #{tarball} vs #{base}" unless base == $1
+    { :tar => tarball, :kind => $2, :version => Gem::Version.new($3), :mac_os => Gem::Version.new($4), :arch => $5,
+      :dir => dir, :app => File.join(dir,'Emacs.app') }
+  }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
+
+
+  arch = {}
+  FileUtils.rm_rf(out_app)
+
+  emacsen.each do |emacs|
+    FileUtils.cd(emacs[:dir]) {
+      Vsh.system(*(%W"tar xf #{emacs[:tar]}"))
+    }
+    if !File.exists? out_app
+      Vsh.cp_r(emacs[:app], out_app, :preserve => true)
+      Vsh.cp(File.join(emacs[:app], 'Contents/MacOS/Emacs'),
+             File.join(out_app,     "Contents/MacOS/Emacs-#{emacs[:mac_os]}"))
+      arch[emacs[:arch]] = emacs
+    else
+      if !arch[emacs[:arch]]
+        lipo_the_world(emacs[:dir], out_app)
+      else
+        Vsh.cp(File.join(emacs[:app], 'Contents/MacOS/Emacs'),
+               File.join(out_app,     "Contents/MacOS/Emacs-#{emacs[:mac_os]}"))
+      end
+    end
+  end
+
+  Vsh.cp(File.join($script_base,'launch.rb'),
+         File.join(out_app, "Contents/MacOS/Emacs"))
+
+  base
+end
+
+def code_sign(app, signer)
+  # HACK: Work around problem with Mac OS X's codesign script detection. It doesn't detect "#! /usr/bin/perl" correctly. :-(
+  Find.find(File.join(app, "Contents/MacOS")) do |path|
+    next unless File.file?(path) && File.executable?(path)
+    if IO.read(path, 4) == '#! /'
+      puts "Fixing '#! /' in #{path}"
+      IO.write(path, IO.read(path).sub!(/^#! /,'#!/'))
+    end
+  end
+  Vsh.system *%W"codesign --deep --sign #{signer} #{app}"
+end
+
+def make_dmg(out_dmg, app)
+  # Git (or anything really) can't store resource forks. So compile the resource fork from scratch:
+  Vsh.system *%W"Rez -o #{'emacs-dmg/More.../Alternative Icon'} emacs-dmg/icon.r"
+  # Set the finder info bit that says the file has a custom icon.
+  Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{"emacs-dmg/More.../Alternative Icon"}"
+  Vsh.system *(['bash'] + ($verbose ? ['-x'] : []) + %W"#{$script_base+'/emacs-dmg/make-dmg'} #{out_dmg} Emacs emacs-dmg/Applications #{app} emacs-dmg/Heroes.rtf emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store")
+end
+
+
+code_signer = nil
+(opts=OptionParser.new do |opts|
+  opts.banner = "Usage:\n\t#{$0} [options] <EMACS_TARBALL>..."
+  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
+  opts.on("-s", "--sign IDENTITY", "Code sign the resulting app using IDENTITY") { |c| code_signer = c }
+  opts.on_tail("-h", "--help") { puts opts; exit }
+end).parse!
+
+emacsen = ARGV.dup
+opts.abort("Need at least one tarball\n\n"+opts.help) if emacsen.length < 1
+
+out_app = 'Emacs.app'
+base = combine(emacsen, out_app)
+
+code_sign(out_app, code_signer) if code_signer
+
+make_dmg("#{base}-universal.dmg", out_app)
