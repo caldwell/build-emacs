@@ -56,7 +56,7 @@ def code_sign(app, signer)
     next unless File.file?(path) && File.executable?(path)
     if IO.read(path, 4) == '#! /'
       puts "Fixing '#! /' in #{path}"
-      IO.write(path, IO.read(path).sub!(/^#! /,'#!/'))
+      IO.write(path, IO.read(path).sub!(%r'^#! /','#!/'))
     end
   end
   Vsh.system *%W"codesign --deep --sign #{signer} #{app}"
