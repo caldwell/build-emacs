@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'shell'
+require 'fileutils'
+require './build-emacs.rb'
+
+verbose = 0
+(opts=OptionParser.new do |opts|
+  opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
+  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| verbose += 1 }
+  opts.on_tail("-h", "--help") { puts opts; exit }
+end).parse!
+
+source_tar = ARGV.shift || opts.abort("Missing <SOURCE_TARBALL>\n\n"+opts.help)
+kind       = ARGV.shift || opts.abort("Missing <KIND>\n\n"+opts.help)
+
+label = kind == 'pretest' ? 'pretest-' : ''
+version = source_tar =~ /^emacs-(.*)\.tar/ && $1 || throw("couldn't parse version from #{source_tar}")
+
+src_dir = 'emacs-source'
+
+sh = Shell.new
+FileUtils.rm_rf src_dir
+FileUtils.mkdir_p src_dir
+sh.pushd src_dir
+sh.system(*(%W(tar xf #{"../"+source_tar} --strip-components=1))) > STDOUT
+sh.popd
+
+binary = build_emacs src_dir, "Emacs-#{label}#{version}-`sw_vers -productVersion`-`uname -m`", :verbose => verbose > 0
+
+puts "Built #{binary}"
