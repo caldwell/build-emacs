@@ -6,7 +6,10 @@ require 'fileutils'
 require 'find'
 require 'rubygems'
 $script_base = File.join ".",File.dirname(__FILE__)
-require File.join($script_base,'verbose-shell.rb')
+def script_base(*path)
+  File.join($script_base, *path)
+end
+require script_base('verbose-shell.rb')
 Vsh = VerboseShell
 
 def combine(tars, out_app)
@@ -44,7 +47,7 @@ def combine(tars, out_app)
     end
   end
 
-  Vsh.cp(File.join($script_base,'launch.rb'),
+  Vsh.cp(script_base('launch.rb'),
          File.join(out_app, "Contents/MacOS/Emacs"))
 
   base
@@ -69,10 +72,12 @@ end
 
 def make_dmg(out_dmg, app)
   # Git (or anything really) can't store resource forks. So compile the resource fork from scratch:
-  Vsh.system *%W"Rez -o #{'emacs-dmg/More.../Alternative Icon'} emacs-dmg/icon.r"
+  Vsh.system *%W"Rez -o #{script_base('emacs-dmg/More.../Alternative Icon')} #{script_base('emacs-dmg/icon.r')}"
   # Set the finder info bit that says the file has a custom icon.
-  Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{"emacs-dmg/More.../Alternative Icon"}"
-  Vsh.system *(['bash'] + ($verbose ? ['-x'] : []) + %W"#{$script_base+'/emacs-dmg/make-dmg'} #{out_dmg} Emacs emacs-dmg/Applications #{app} emacs-dmg/Heroes.rtf emacs-dmg/More... emacs-dmg/background.png emacs-dmg/dot-DS_Store")
+  Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{script_base("emacs-dmg/More.../Alternative Icon")}"
+  Vsh.system *(['bash'] + ($verbose ? ['-x'] : []) +
+               [script_base('emacs-dmg/make-dmg'), out_dmg, 'Emacs', app] +
+               %W[Applications Heroes.rtf More... background.png dot-DS_Store].map{|f| script_base('emacs-dmg', f) })
 end
 
 
