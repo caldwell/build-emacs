@@ -25,9 +25,12 @@ def build_emacs(src_dir, out_name, options={})
   out_name
 end
 
+arch=:x86_64
+
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
+  opts.on("-a", "--arch ARCH", [:powerpc, :i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -45,6 +48,14 @@ FileUtils.cd(src_dir) do
   Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
 end
 
-binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{`sw_vers -productVersion`.chomp}-#{`uname -m`.chomp}"
+os_version = `sw_vers -productVersion`.chomp
+
+options = arch == :powerpc ? { :cc => 'powerpc-apple-darwin10-gcc-4.2.1', :host => 'powerpc-apple-darwin', :min_os => '10.4' } :
+          arch == :i386    ? { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host => 'i686-apple-darwin',    :min_os => '10.5' } :
+                             { }
+options[:min_os] =  '10.7' if os_version =~ /^10\.8\./
+options[:min_os] =  '10.5' if os_version =~ /^10\.6\./ && arch == :x86_64
+
+binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{os_version}-#{arch.to_s}", options
 
 puts "Built #{binary}"
