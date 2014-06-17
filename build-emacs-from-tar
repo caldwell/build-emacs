@@ -15,7 +15,7 @@ def build_emacs(src_dir, out_name, options={})
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     host_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
 
-    ENV['CC']="#{options[:cc]} #{options[:min_os_flag]} #{options[:extra_cc_options]}"
+    ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
     Vsh.system(*(%W"./configure --with-ns")+host_flags) || throw("configure failed")
     Vsh.system(*(%W"make clean install")) || throw("make failed")
