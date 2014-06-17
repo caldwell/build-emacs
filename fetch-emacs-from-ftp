@@ -41,4 +41,4 @@ newfile=File.basename(latest[:file], '.xz')+'.bz2'
 sh=Shell.new
 sh.system(*(%W(xzcat #{latest[:file]}))) | sh.system('bzip2') > newfile
 
-File.unlink(latest[:file])
+#File.unlink(latest[:file]) # Keep the original around for now.
