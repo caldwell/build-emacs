@@ -17,7 +17,7 @@ def build_emacs(src_dir, out_name, options={})
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
-    Vsh.system(*(%W"./configure --with-ns")+host_flags) || throw("configure failed")
+    Vsh.system(*(%W"./configure --with-ns")+host_flags+(options[:extra_configure_flags]||[])) || throw("configure failed")
     Vsh.system(*(%W"make clean install")) || throw("make failed")
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -50,7 +50,7 @@ end
 
 os_version = `sw_vers -productVersion`.chomp
 
-options = arch == :powerpc ? { :cc => 'powerpc-apple-darwin10-gcc-4.2.1', :host => 'powerpc-apple-darwin', :min_os => '10.4' } :
+options = arch == :powerpc ? { :cc => 'powerpc-apple-darwin10-gcc-4.2.1', :host => 'powerpc-apple-darwin', :min_os => '10.4', :extra_configure_flags => ['--without-xml2'] } :
           arch == :i386    ? { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host => 'i686-apple-darwin',    :min_os => '10.5' } :
                              { }
 options[:min_os] =  '10.7' if os_version =~ /^10\.8\./
