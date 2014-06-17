@@ -55,6 +55,8 @@ options = arch == :powerpc ? { :cc => 'powerpc-apple-darwin10-gcc-4.2.1', :host 
                              { }
 options[:min_os] =  '10.7' if os_version =~ /^10\.8\./
 options[:min_os] =  '10.5' if os_version =~ /^10\.6\./ && arch == :x86_64
+options[:extra_configure_flags] ||= []
+options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_version =~ /^10\.6\./
 
 binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{os_version}-#{arch.to_s}", options
 
