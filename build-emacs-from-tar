@@ -12,8 +12,6 @@ def build_emacs(src_dir, out_name, options={})
   options[:extra_cc_options] ||= ''
 
   FileUtils.cd(src_dir) do
-    Vsh.system(['./configure']*2)
-
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     host_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
 
