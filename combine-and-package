@@ -17,10 +17,12 @@ def combine(tars, out_app)
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
     tarball = File.basename tarball_path
-    tarball =~ /^(Emacs(-pretest)?-([\d.]+|20\d\d-\d\d-\d\d_\d\d-\d\d-\d\d-[^-]+))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
+    tarball =~                                /^(Emacs-([\d.]+))-([\d.]+)-([^-]+).tar/ or
+    tarball =~                        /^(Emacs-pretest-([\d.]+))-([\d.]+)-([^-]+).tar/ or
+    tarball =~ /^(Emacs-(20\d\d-\d\d-\d\d_\d\d-\d\d-\d\d-[^-]+))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
     base ||= $1
     abort "bases don't match: #{tarball} vs #{base}" unless base == $1
-    { :tar => tarball, :kind => $2, :version => $3, :mac_os => Gem::Version.new($4), :arch => $5,
+    { :tar => tarball, :version => $2, :mac_os => Gem::Version.new($3), :arch => $4,
       :dir => dir, :app => File.join(dir,'Emacs.app') }
   }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
 
