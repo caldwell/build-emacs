@@ -58,6 +58,6 @@ options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 
-binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{options[:min_os]}-#{arch.to_s}", options
+binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}", options
 
 puts "Built #{binary}"
