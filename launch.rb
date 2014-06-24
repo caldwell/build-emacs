@@ -1,26 +1,15 @@
 #!/usr/bin/ruby
 
-class NumifiedVersion
-  attr_accessor :str, :num
-  def initialize(version_string)
-    @str = version_string
-    @num = @str.sub(/^(\d+)\.(\d+)(?:\.(\d+))?$/) { |m| $1.to_i*10000 + $2.to_i*100 + ($3 || "0").to_i*1 }.to_i
-  end
-  def to_s; @str; end
-  def ==(a);  return @num == a.num; end
-  def <=(a);  return @num <= a.num; end
-  def <=>(a); return @num <=> a.num; end
-end
-
+require 'rubygems'
 
 def osascript(script)
   system 'osascript', *script.split(/\n/).map { |line| ['-e', line] }.flatten
 end
 
-version = NumifiedVersion.new(`sw_vers -productVersion`)
+version = Gem::Version.new(`sw_vers -productVersion`)
 arch=`uname -m`.chomp
 
-emacs = Dir["#{File.dirname($0)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+)$/) && {:arch=>$1, :version=>NumifiedVersion.new($2), :exe=>file} }
+emacs = Dir["#{File.dirname($0)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+)$/) && {:arch=>$1, :version=>Gem::Version.new($2), :exe=>file} }
         .select { |v| v[:arch] == arch && v[:version] <= version }
         .sort { |a,b| a[:version] <=> b[:version] }
         .last
