@@ -19,8 +19,8 @@ if emacs
   # stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
   # while not affecting any user paths.
   base_dir=File.absolute_path(File.dirname($0))
-  ENV['PATH'] += File.join(base_dir,     "bin-#{emacs[:arch]}-#{emacs[:version]}") + ':' +
-                 File.join(base_dir, "libexec-#{emacs[:arch]}-#{emacs[:version]}")
+  ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{emacs[:arch]}-#{emacs[:version]}") +
+                 ':' + File.join(base_dir, "libexec-#{emacs[:arch]}-#{emacs[:version]}")
   exec [emacs[:exe], emacs[:exe]], *ARGV
 end
 
