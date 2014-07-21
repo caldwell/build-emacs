@@ -25,7 +25,7 @@ end
 require script_base('verbose-shell.rb')
 Vsh = VerboseShell
 
-def combine(tars, out_app)
+def combine(tars, out_app, bin_arch)
   base = nil
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
@@ -57,6 +57,12 @@ def combine(tars, out_app)
              File.join(out_app,     "Contents/MacOS/bin-#{emacs[:arch]}-#{emacs[:mac_os]}"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/libexec'),
              File.join(out_app,     "Contents/MacOS/libexec-#{emacs[:arch]}-#{emacs[:mac_os]}"))
+    if bin_arch && bin_arch == "#{emacs[:arch]}-#{emacs[:mac_os]}"
+      Vsh.ln_s("bin-#{emacs[:arch]}-#{emacs[:mac_os]}",
+               File.join(out_app,     'Contents/MacOS/bin'))
+      Vsh.ln_s("libexec-#{emacs[:arch]}-#{emacs[:mac_os]}",
+               File.join(out_app,     'Contents/MacOS/libexec'))
+    end
   end
 
   Vsh.cp(script_base('launch.rb'),
@@ -94,10 +100,12 @@ end
 
 
 code_signer = nil
+bin_arch = nil
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} [options] <EMACS_TARBALL>..."
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-s", "--sign IDENTITY", "Code sign the resulting app using IDENTITY") { |c| code_signer = c }
+  opts.on("-a", "--bin-arch ARCH", "Make link from plain bin & libexec to ARCH") { |a| bin_arch = a }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -105,7 +113,7 @@ emacsen = ARGV.dup
 opts.abort("Need at least one tarball\n\n"+opts.help) if emacsen.length < 1
 
 out_app = 'Emacs.app'
-base = combine(emacsen, out_app)
+base = combine(emacsen, out_app, bin_arch)
 
 code_sign(out_app, code_signer) if code_signer
 
