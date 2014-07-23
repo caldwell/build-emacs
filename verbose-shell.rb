@@ -30,6 +30,11 @@ class VerboseShell
     FileUtils.cp_r(src, dest, options)
   end
 
+  def self.ln_s(src,dest,options={})
+    system_trace *%W"ln -s #{src} #{dest}"
+    FileUtils.ln_s(src, dest, options)
+  end
+
   def self.rm_rf(file,options={})
     system_trace *%W"rm -rf #{file}"
     FileUtils.rm_rf file, options
