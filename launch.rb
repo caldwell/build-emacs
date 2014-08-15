@@ -33,9 +33,23 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'rubygems'
+require 'open3'
 
 def osascript(script)
   system 'osascript', *script.split(/\n/).map { |line| ['-e', line] }.flatten
+end
+
+def get_env_from_shell(default_shell)
+  env_override={}
+  Open3.popen3("#{default_shell} -c env") {|stdin, stdout, stderr, wait_thr|
+    stdout.each_line { |substr|
+      entry=substr.split('=', 2)
+      env_override[entry[0]] = entry[1][0...-1]
+    }
+    exit_status = wait_thr.value
+  }
+  return nil if env_override.empty?
+  return env_override
 end
 
 version = Gem::Version.new(`sw_vers -productVersion`)
@@ -52,9 +66,10 @@ if emacs
   # while not affecting any user paths.
   base_dir=File.expand_path(File.dirname($0))
   arch_version = emacs[:arch] + '-' + emacs[:_version] # see the 'combine-and-package' script in the build-emacs repo
-  ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{arch_version}") +
-                 ':' + File.join(base_dir, "libexec-#{arch_version}")
-  exec [emacs[:exe], emacs[:exe]], *ARGV
+  emacs_env=get_env_from_shell(ENV['SHELL'])
+  emacs_env['PATH'] += ':' + File.join(base_dir,     "bin-#{arch_version}") +
+                       ':' + File.join(base_dir, "libexec-#{arch_version}")
+  exec emacs_env, [emacs[:exe], emacs[:exe]], *ARGV
 end
 
 osascript <<-ENDSCRIPT
