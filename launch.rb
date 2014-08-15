@@ -53,7 +53,7 @@ if emacs
   base_dir=File.expand_path(File.dirname($0))
   ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{emacs[:arch]}-#{emacs[:version]}") +
                  ':' + File.join(base_dir, "libexec-#{emacs[:arch]}-#{emacs[:version]}")
-  exec [emacs[:exe], emacs[:exe]], *ARGV
+  exec "#{ENV['SHELL']} -i -c #{emacs[:exe]}", *ARGV
 end
 
 osascript <<-ENDSCRIPT
