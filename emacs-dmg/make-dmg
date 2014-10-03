@@ -25,7 +25,5 @@ SetFile -a Vc _dmg-build/background.*
 rm -f tmp.dmg
 ## For Creating the initial .DSStore:
 # hdiutil create -size 200m -volname "Emacs" -fs HFS+J writable.dmg
-hdiutil create -srcfolder _dmg-build -volname "$VOLUME_NAME" tmp.dmg
 rm -f "$OUTPUT_FILE"
-hdiutil convert -format UDBZ tmp.dmg -o "$OUTPUT_FILE"
-rm -f tmp.dmg
+hdiutil create -srcfolder _dmg-build -volname "$VOLUME_NAME" -format UDBZ "$OUTPUT_FILE"
