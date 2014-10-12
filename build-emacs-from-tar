@@ -52,6 +52,12 @@ kind       = ARGV.shift || opts.abort("Missing <KIND>\n\n"+opts.help)
 
 label = kind == 'pretest' ? 'pretest-' : ''
 version = source_tar =~ %r{^(?:.*/)?emacs-(.*)\.tar} && $1 || throw("couldn't parse version from #{source_tar}")
+trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
+
+if trunk && arch == :powerpc
+  puts "Skipping PowerPC build in trunk!"
+  exit 0
+end
 
 src_dir = 'emacs-source'
 
@@ -68,6 +74,7 @@ options = arch == :powerpc ? { :cc => 'powerpc-apple-darwin10-gcc-4.2.1', :host 
                              { }
 options[:min_os] =  '10.7' if os_maj_version == '10.8'
 options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
+options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 
