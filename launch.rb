@@ -46,6 +46,14 @@ emacs = Dir["#{File.dirname($0)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+
         .sort { |a,b| a[:version] <=> b[:version] } \
         .last
 
+# This dedups environment variables. Mac OS X 10.10 (Yosemite) always gives
+# us 2 PATHs(!!)  See: https://github.com/caldwell/build-emacs/issues/39
+# Ruby is written such that the last key wins, which is what we want since
+# the first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
+eh=ENV.to_h
+ENV.replace({})
+ENV.replace(eh)
+
 if emacs
   # Emacs.app sticks Emacs.app/Contents/MacOS/{bin,libexec} on the end of the PATH when it starts, so if we
   # stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
