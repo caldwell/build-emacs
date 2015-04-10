@@ -57,11 +57,12 @@ Builds of the main Emacs source repository are expected to be packaged up
 into tars elsewhere. http://emacsformacosx.com has a Jenkins job that pulls down
 the latest code and then tars it up like so:
 
-    DIR=emacs-$BUILD_ID-$BZR_REVISION
-    rm -rf emacs-*
-    bzr checkout --lightweight . $DIR
+    DATE=$(date "+%Y-%m-%d_%H-%M-%S")
+    SHORT=$(git rev-parse --short HEAD)
+    DIR=emacs-$DATE-$SHORT
+    git archive --prefix="$DIR/" HEAD | tar x
     (cd $DIR && ./autogen.sh)
-    tar cjf $DIR.tar.bz2 --exclude '.bzr' $DIR
+    tar cjf $DIR.tar.bz2 $DIR
 
 
 ### combine-and-package
