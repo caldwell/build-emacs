@@ -1,5 +1,5 @@
-Emacs Build Script
-==================
+Emacs Build Scripts
+===================
 
 These are the emacs build scripts that produces the builds at
 http://emacsformacosx.com/.
