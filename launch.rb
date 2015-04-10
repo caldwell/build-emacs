@@ -9,7 +9,7 @@
 # each architecture and Emacs has multiple x86_64 architectures binaries.
 #
 # Why are there multiple x86_64 binaries? Because the Emacs source does OS
-# feature detection at compile time instead of at run-time. So If you build
+# feature detection at compile time instead of at run-time. So if you build
 # Emacs on 10.9 then it will contain hard-coded calls to 10.9 APIs and will
 # not run on 10.6. If you compile it on 10.6, then it will also run on 10.9,
 # but it won't take advantage of any of the features in 10.9.
