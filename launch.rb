@@ -50,7 +50,7 @@ emacs = Dir["#{File.dirname($0)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+
 # us 2 PATHs(!!)  See: https://github.com/caldwell/build-emacs/issues/39
 # Ruby is written such that the last key wins, which is what we want since
 # the first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
-eh=ENV.to_h
+eh={}; ENV.each {|k,v| eh[k]=v} # Should be eh=ENV.to_h, but ENV in Ruby 1.8.7 doesn't have to_h.
 ENV.replace({})
 ENV.replace(eh)
 
