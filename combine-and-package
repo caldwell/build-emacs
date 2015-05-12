@@ -93,9 +93,22 @@ def code_sign(app, signer)
   end
 end
 
+def osascript(script)
+  Vsh.system 'osascript', *script.split(/\n/).map { |line| ['-e', line] }.flatten
+end
+
+def create_finder_comment(file, comment)
+  osascript <<-END
+    tell application "Finder"
+      set comment of file (POSIX file "#{file}") to "#{comment.gsub(/"/,'\\"')}"
+    end tell
+  END
+end
+
 def compile_icon(out, in_base)
   # Git (or anything really) can't store resource forks. So compile the resource fork from scratch:
   Vsh.system *%W"Rez -o #{out} #{in_base+'.r'}"
+  create_finder_comment(File.absolute_path(out), IO.read(in_base+'.comment')) if File.exists?(in_base+'.comment')
   # Set the finder info bit that says the file has a custom icon.
   Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{out}"
 end
