@@ -93,11 +93,15 @@ def code_sign(app, signer)
   end
 end
 
-def make_dmg(out_dmg, app)
+def compile_icon(out, in_base)
   # Git (or anything really) can't store resource forks. So compile the resource fork from scratch:
-  Vsh.system *%W"Rez -o #{script_base('emacs-dmg/More.../Alternative Icon')} #{script_base('emacs-dmg/icon.r')}"
+  Vsh.system *%W"Rez -o #{out} #{in_base+'.r'}"
   # Set the finder info bit that says the file has a custom icon.
-  Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{script_base("emacs-dmg/More.../Alternative Icon")}"
+  Vsh.system *%W"xattr -x -w com.apple.FinderInfo #{"00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"} #{out}"
+end
+
+def make_dmg(out_dmg, app)
+  compile_icon(script_base('emacs-dmg/More.../Alternative Icon'), script_base('emacs-dmg/icon'))
   Vsh.system *(['bash'] + ($verbose ? ['-x'] : []) +
                [script_base('emacs-dmg/make-dmg'), out_dmg, 'Emacs', app] +
                %W[Applications Heroes.rtf More... background.png dot-DS_Store].map{|f| script_base('emacs-dmg', f) })
