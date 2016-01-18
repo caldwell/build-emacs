@@ -18,6 +18,7 @@ require 'shell'
 require 'fileutils'
 require 'find'
 require 'rubygems'
+require 'json'
 $script_base = File.join ".",File.dirname(__FILE__)
 def script_base(*path)
   File.join($script_base, *path)
@@ -30,12 +31,12 @@ def combine(tars, out_app, bin_arch)
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
     tarball = File.basename tarball_path
-    tarball =~                                /^(Emacs-([\d.]+))-([\d.]+)-([^-]+).tar/ or
-    tarball =~             /^(Emacs-pretest-([\d.]+(?:-rc\d+)?))-([\d.]+)-([^-]+).tar/ or
-    tarball =~ /^(Emacs-(20\d\d-\d\d-\d\d_\d\d-\d\d-\d\d-[^-]+))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
+    tarball =~                                /^(Emacs-([\d.]+))()-([\d.]+)-([^-]+).tar/ or
+    tarball =~             /^(Emacs-pretest-([\d.]+(?:-rc\d+)?))()-([\d.]+)-([^-]+).tar/ or
+    tarball =~ /^(Emacs-(20\d\d-\d\d-\d\d_\d\d-\d\d-\d\d-([^-]+)))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
     base ||= $1
     abort "bases don't match: #{tarball} vs #{base}" unless base == $1
-    { :tar => tarball, :version => $2, :mac_os => Gem::Version.new($3), :arch => $4,
+    { :tar => tarball, :version => $2, :git_rev => $3, :mac_os => Gem::Version.new($4), :arch => $5,
       :dir => dir, :app => File.join(dir,'Emacs.app') }
   }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
 
@@ -73,7 +74,16 @@ def combine(tars, out_app, bin_arch)
   Vsh.cp(script_base('launch.rb'),
          File.join(out_app, "Contents/MacOS/Emacs"))
 
+  add_nightly_version_to_info_plist(out_app, emacsen[0][:git_rev]) if emacsen[0][:git_rev] != ''
+
   base
+end
+
+def add_nightly_version_to_info_plist(app, git_rev)
+  sh = Shell.new
+  info = JSON.parse(sh.system(*%W"plutil -convert json #{app}/Contents/Info.plist -o -").to_s)
+  info["GitRevision"] = git_rev
+  sh.echo(info.to_json) | sh.system(*%W"plutil -convert xml1 - -o #{app}/Contents/Info.plist")
 end
 
 def code_sign(app, signer)
