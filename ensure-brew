@@ -14,7 +14,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
-require File.join ".",File.dirname(__FILE__),'verbose-shell.rb'
+require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 
 def ensure_brew(dir, packages, options)
   vsh = VerboseShell

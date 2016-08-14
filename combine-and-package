@@ -19,7 +19,7 @@ require 'fileutils'
 require 'find'
 require 'rubygems'
 require 'json'
-$script_base = File.join ".",File.dirname(__FILE__)
+$script_base = File.expand_path(File.dirname(__FILE__))
 def script_base(*path)
   File.join($script_base, *path)
 end
