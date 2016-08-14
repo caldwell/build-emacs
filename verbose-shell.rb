@@ -15,6 +15,11 @@ class VerboseShell
     Kernel.system *args or abort "#{args[0]} failed"
   end
 
+  def self.systemr(*args)
+    system_trace *args
+    Kernel.system *args
+  end
+
   def self.mv(src,dest,options={})
     system_trace *%W"mv #{src} #{dest}"
     FileUtils.mv(src, dest, options)
