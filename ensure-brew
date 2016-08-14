@@ -20,7 +20,7 @@ def ensure_brew(dir, packages, options)
   vsh = VerboseShell
   vsh.verbose = options[:verbose]
 
-  vsh.system(*%W"git clone https://github.com/Homebrew/homebrew.git #{dir}") || abort("git failed!") unless File.exist?(dir)
+  vsh.system(*%W"git clone https://github.com/Homebrew/brew.git #{dir}") || abort("git failed!") unless File.exist?(dir)
 
   vsh.chdir(dir) || abort("chdir #{dir}: $!")
 
