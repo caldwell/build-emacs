@@ -44,4 +44,9 @@ class VerboseShell
     system_trace *%W"mkdir -p #{file}"
     FileUtils.mkdir_p file, options
   end
+
+  def self.chdir(dir)
+    system_trace *%W"chdir #{dir}"
+    Dir.chdir dir
+  end
 end
