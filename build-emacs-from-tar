@@ -32,8 +32,8 @@ def build_emacs(src_dir, out_name, options={})
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
-    Vsh.system(*(%W"./configure --with-ns")+site_lisp_flags+host_flags+(options[:extra_configure_flags]||[])) || throw("configure failed")
-    Vsh.system(*(%W"make clean install")) || throw("make failed")
+    Vsh.system(*(%W"./configure --with-ns")+site_lisp_flags+host_flags+(options[:extra_configure_flags]||[]))
+    Vsh.system(*(%W"make clean install"))
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
   Vsh.mv(File.join(src_dir, 'nextstep', out_name), out_name, :force => true)
