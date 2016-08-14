@@ -15,27 +15,36 @@
 
 require 'optparse'
 require File.join ".",File.dirname(__FILE__),'verbose-shell.rb'
-Vsh = VerboseShell
 
-gitrev = nil
+def ensure_brew(dir, packages, options)
+  vsh = VerboseShell
+  vsh.verbose = options[:verbose]
 
-(opts=OptionParser.new do |opts|
-  opts.banner = "Usage:\n\t#{$0} [options] <DIRECTORY> [<PACKAGE> ...]"
-  opts.on("-v", "--verbose",                 "Turn up the verbosity")                          { |v|   Vsh.verbose = true }
-  opts.on(      "--checkout=<GIT_REVISION>", "Checkout a particular git revision of homebrew") { |rev| gitrev = rev }
-  opts.on_tail("-h", "--help") { puts opts; exit }
-end).parse!
+  vsh.system(*%W"git clone https://github.com/Homebrew/homebrew.git #{dir}") || abort("git failed!") unless File.exist?(dir)
 
-dir    = ARGV.shift || opts.abort("Missing <DIRECTORY>\n\n"+opts.help)
+  vsh.chdir(dir) || abort("chdir #{dir}: $!")
 
-Vsh.system(*%W"git clone https://github.com/Homebrew/homebrew.git #{dir}") || abort("git failed!") unless File.exist?(dir)
+  vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
 
-Vsh.chdir(dir) || abort("chdir #{dir}: $!")
+  ENV['PATH'] = "#{Dir.pwd}/bin:#{ENV['PATH']}"
 
-Vsh.system(*%W"git checkout #{gitrev}") || abort("git failed!") if gitrev
+  packages.each do |package|
+    vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+  end
+end
 
-ENV['PATH'] = "#{Dir.pwd}/bin:#{ENV['PATH']}"
+if $0 == __FILE__
+  gitrev = nil
+  verbose = nil
 
-ARGV.each do |package|
-  Vsh.systemr(*%W"brew upgrade #{package}") || Vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+  (opts=OptionParser.new do |opts|
+     opts.banner = "Usage:\n\t#{$0} [options] <DIRECTORY> [<PACKAGE> ...]"
+     opts.on("-v", "--verbose",                 "Turn up the verbosity")                          { |v|   verbose = true }
+     opts.on(      "--checkout=<GIT_REVISION>", "Checkout a particular git revision of homebrew") { |rev| gitrev = rev }
+     opts.on_tail("-h", "--help") { puts opts; exit }
+   end).parse!
+
+  dir    = ARGV.shift || opts.abort("Missing <DIRECTORY>\n\n"+opts.help)
+
+  ensure_brew(dir, ARGV, :gitrev => gitrev, :verbose=>verbose)
 end
