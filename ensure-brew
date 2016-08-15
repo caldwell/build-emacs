@@ -16,6 +16,13 @@
 require 'optparse'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 
+def with_env(env)
+  saved = {}
+  env.each {|k,v| saved[k] = ENV[k]; ENV[k] = v }
+  yield
+  saved.each {|k,v| ENV[k] = v }
+end
+
 def ensure_brew(dir, packages, options)
   vsh = VerboseShell
   vsh.verbose = options[:verbose]
@@ -26,10 +33,10 @@ def ensure_brew(dir, packages, options)
 
   vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
 
-  ENV['PATH'] = "#{Dir.pwd}/bin:#{ENV['PATH']}"
-
-  packages.each do |package|
-    vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+  with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
+    packages.each do |package|
+      vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+    end
   end
 end
 
