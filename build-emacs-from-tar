@@ -52,7 +52,7 @@ end
 
 def with_writable_mode(file)
   old = File.stat(file).mode
-  FileUtils.chmod("u+w", file)
+  File.chmod(0775, file)
   yield
   File.chmod(old, file)
 end
