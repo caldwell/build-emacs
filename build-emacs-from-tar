@@ -66,7 +66,7 @@ def copy_lib(exe, brew_dir, dest)
       }
       unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
         Vsh.mkdir_p(dest)
-        Vsh.cp(File.join(brew_dir, "lib", lib), dest)
+        Vsh.cp(File.join(brew_dir, brew_path, lib), dest)
         copy_lib(File.join(dest, lib), brew_dir, dest) # Copy lib's deps, too
       end
     end
