@@ -145,7 +145,8 @@ end).parse!
 emacsen = ARGV.dup
 opts.abort("Need at least one tarball\n\n"+opts.help) if emacsen.length < 1
 
-out_app = 'Emacs.app'
+out_app = 'combined/Emacs.app'
+Vsh.mkdir_p 'combined'
 base = combine(emacsen, out_app, bin_arch)
 
 code_sign(out_app, code_signer) if code_signer
