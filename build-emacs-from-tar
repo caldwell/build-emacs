@@ -27,13 +27,16 @@ def build_emacs(src_dir, out_name, options={})
   FileUtils.cd(src_dir) do
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     host_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
+    parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
     site_lisp_flags = ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
     Vsh.system(*(%W"./configure --with-ns")+site_lisp_flags+host_flags+(options[:extra_configure_flags]||[]))
-    Vsh.system(*(%W"make clean install"))
+    Vsh.system(*(%W"make clean"))
+    Vsh.system(*(%W"make")+parallel_flags)
+    Vsh.system(*(%W"make install"))
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
   Vsh.mv(File.join(src_dir, 'nextstep', out_name), out_name, :force => true)
@@ -41,11 +44,13 @@ def build_emacs(src_dir, out_name, options={})
 end
 
 arch=:x86_64
+parallel=false
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
+  opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -73,6 +78,7 @@ options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
+options[:parallel] = parallel if parallel
 
 binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}", options
 
