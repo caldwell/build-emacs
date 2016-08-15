@@ -25,6 +25,12 @@ class VerboseShell
     FileUtils.mv(src, dest, options)
   end
 
+  def self.chmod(mode,list,options={})
+    list = [list] unless list.class == Array
+    system_trace *%W"chmod #{mode} "+list
+    FileUtils.chmod(mode, list, options)
+  end
+
   def self.cp(src,dest,options={})
     system_trace *%W"cp #{src} #{dest}"
     FileUtils.cp(src, dest, options)
