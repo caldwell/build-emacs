@@ -62,6 +62,7 @@ if emacs
   arch_version = emacs[:arch] + '-' + emacs[:_version] # see the 'combine-and-package' script in the build-emacs repo
   ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{arch_version}") +
                  ':' + File.join(base_dir, "libexec-#{arch_version}")
+  ENV['DYLD_LIBRARY_PATH'] = ([File.join(base_dir, "lib-#{arch_version}")] + (ENV['DYLD_LIBRARY_PATH'] ? [ENV['DYLD_LIBRARY_PATH']]  : [])).join(':')
   exec [emacs[:exe], emacs[:exe]], *ARGV
 end
 

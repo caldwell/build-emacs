@@ -50,6 +50,7 @@ def combine(tars, out_app, bin_arch)
     if !File.exists? out_app
       Vsh.cp_r(emacs[:app], out_app, :preserve => true)
       Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/bin'))
+      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/lib'))
       Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/libexec'))
     end
     # The 'codesign' app (from XCode 6.0) dies when it sees something like 'bin-i386-10.5' in the MacOS
@@ -61,11 +62,15 @@ def combine(tars, out_app, bin_arch)
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/bin'),
              File.join(out_app,     "Contents/MacOS/bin-#{arch_version}"))
+    Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/lib'),
+             File.join(out_app,     "Contents/MacOS/lib-#{arch_version}"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/libexec'),
              File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}"))
     if bin_arch && bin_arch.gsub('.','_') == arch_version
       Vsh.ln_s("bin-#{arch_version}",
                File.join(out_app,     'Contents/MacOS/bin'))
+      Vsh.ln_s("lib-#{arch_version}",
+               File.join(out_app,     'Contents/MacOS/lib'))
       Vsh.ln_s("libexec-#{arch_version}",
                File.join(out_app,     'Contents/MacOS/libexec'))
     end

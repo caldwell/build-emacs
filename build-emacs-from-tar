@@ -15,14 +15,18 @@
 
 require 'optparse'
 require 'fileutils'
+require File.join File.expand_path(File.dirname(__FILE__)),'ensure-brew.rb'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 Vsh = VerboseShell
 
-def build_emacs(src_dir, out_name, options={})
+def build_emacs(src_dir, brew_dir, out_name, options={})
   out_name = out_name + ".tar.bz2"
   puts "building emacs: #{src_dir} => #{out_name}"
   options[:cc] ||= "cc"
   options[:extra_cc_options] ||= ''
+
+  ENV["PKG_CONFIG_PATH"]="#{brew_dir}/lib/pkgconfig:#{ENV["PKG_CONFIG_PATH"]}"
+  ENV["PATH"]="#{brew_dir}/bin:#{ENV["PATH"]}"
 
   FileUtils.cd(src_dir) do
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
@@ -37,20 +41,57 @@ def build_emacs(src_dir, out_name, options={})
     Vsh.system(*(%W"make clean"))
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
+
+    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, 'nextstep/Emacs.app/Contents/MacOS/lib') # Install and adjust libs into the App.
+
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
   Vsh.mv(File.join(src_dir, 'nextstep', out_name), out_name, :force => true)
   out_name
 end
 
+def with_writable_mode(file)
+  old = File.stat(file).mode
+  FileUtils.chmod("u+w", file)
+  yield
+  File.chmod(old, file)
+end
+
+def copy_lib(exe, brew_dir, dest)
+  `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
+    (m,orig,brew_path,lib)=line.match(%r,^\s+(#{brew_dir}(/[^ ]+)/(lib[^/ ]+))\s,).to_a
+    if m
+      with_writable_mode(exe) {
+        Vsh.system(*%W"install_name_tool -change #{orig} #{brew_path}/#{lib} #{exe}") # remove our local build path name to leak as litle as possible (not that it really matters)
+      }
+      unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
+        Vsh.mkdir_p(dest)
+        Vsh.cp(File.join(brew_dir, "lib", lib), dest)
+        copy_lib(File.join(dest, lib), brew_dir, dest) # Copy lib's deps, too
+      end
+    end
+  end
+end
+
+def prepare_extra_deps(brew_dir, out_name, options)
+  extra_source = "#{out_name}-extra-source"
+  Vsh.rm_rf extra_source
+  ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :verbose => Vsh.verbose) # build deps
+  ensure_brew(brew_dir, %w(gnutls),     :gitrev => options[:brew_gitrev], :get_source => extra_source, :verbose => Vsh.verbose)
+  Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
+  "#{extra_source}.tar"
+end
+
 arch=:x86_64
 parallel=false
+brew_gitrev=nil
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
+  opts.on(      "--brew-gitrev REV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev = r }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -62,7 +103,9 @@ version = source_tar =~ %r{^(?:.*/)?emacs-(.*)\.tar} && $1 || throw("couldn't pa
 trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
 
 src_dir = 'emacs-source'
+brew_dir = File.expand_path("brew")
 
+Vsh.rm_rf brew_dir
 Vsh.rm_rf src_dir
 Vsh.mkdir_p src_dir
 FileUtils.cd(src_dir) do
@@ -80,6 +123,10 @@ options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:parallel] = parallel if parallel
 
-binary = build_emacs src_dir, "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}", options
+out_name = "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
-puts "Built #{binary}"
+extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev
+
+binary = build_emacs src_dir, brew_dir, out_name, options
+
+puts "Built #{binary}, #{extra_source}"
