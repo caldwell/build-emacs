@@ -35,14 +35,14 @@ def ensure_brew(dir, packages, options)
     vsh.cp(File.join(File.dirname(__FILE__),'brew-source.rb'), File.join(dir,'bin'))
   end
 
-  vsh.chdir(dir) || abort("chdir #{dir}: $!")
+  FileUtils.cd(dir) do
+    vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
 
-  vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
-
-  with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
-    packages.each do |package|
-      vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
-      vsh.system(*%W"brew source #{package} #{get_source}") if get_source
+    with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
+      packages.each do |package|
+        vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+        vsh.system(*%W"brew source #{package} #{get_source}") if get_source
+      end
     end
   end
 end
