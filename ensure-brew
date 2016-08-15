@@ -29,6 +29,12 @@ def ensure_brew(dir, packages, options)
 
   vsh.system(*%W"git clone https://github.com/Homebrew/brew.git #{dir}") || abort("git failed!") unless File.exist?(dir)
 
+  get_source = options[:get_source] && File.expand_path(options[:get_source])
+  if get_source
+    vsh.mkdir_p(get_source)
+    vsh.cp(File.join(File.dirname(__FILE__),'brew-source.rb'), File.join(dir,'bin'))
+  end
+
   vsh.chdir(dir) || abort("chdir #{dir}: $!")
 
   vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
@@ -36,22 +42,25 @@ def ensure_brew(dir, packages, options)
   with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
     packages.each do |package|
       vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+      vsh.system(*%W"brew source #{package} #{get_source}") if get_source
     end
   end
 end
 
 if $0 == __FILE__
   gitrev = nil
+  get_source = nil
   verbose = nil
 
   (opts=OptionParser.new do |opts|
      opts.banner = "Usage:\n\t#{$0} [options] <DIRECTORY> [<PACKAGE> ...]"
      opts.on("-v", "--verbose",                 "Turn up the verbosity")                          { |v|   verbose = true }
      opts.on(      "--checkout=<GIT_REVISION>", "Checkout a particular git revision of homebrew") { |rev| gitrev = rev }
+     opts.on(      "--get-source=<SOURCE_DIR>", "Also fetch sources into SOURCE_DIR")             { |dir| get_source = dir }
      opts.on_tail("-h", "--help") { puts opts; exit }
    end).parse!
 
   dir    = ARGV.shift || opts.abort("Missing <DIRECTORY>\n\n"+opts.help)
 
-  ensure_brew(dir, ARGV, :gitrev => gitrev, :verbose=>verbose)
+  ensure_brew(dir, ARGV, :gitrev => gitrev, :get_source => get_source, :verbose=>verbose)
 end
