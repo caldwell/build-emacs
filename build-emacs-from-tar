@@ -107,7 +107,6 @@ trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
 src_dir = 'emacs-source'
 brew_dir = File.expand_path("brew")
 
-Vsh.rm_rf brew_dir
 Vsh.rm_rf src_dir
 Vsh.mkdir_p src_dir
 FileUtils.cd(src_dir) do
