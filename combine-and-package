@@ -44,6 +44,7 @@ def combine(tars, out_app, bin_arch)
   FileUtils.rm_rf(out_app)
 
   emacsen.each do |emacs|
+    Vsh.rm_rf(emacs[:app])
     FileUtils.cd(emacs[:dir]) {
       Vsh.system(*(%W"tar xf #{emacs[:tar]}"))
     }
