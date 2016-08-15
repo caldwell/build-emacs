@@ -41,7 +41,7 @@ def combine(tars, out_app, bin_arch)
   }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
 
 
-  FileUtils.rm_rf(out_app)
+  Vsh.rm_rf(out_app)
 
   emacsen.each do |emacs|
     Vsh.rm_rf(emacs[:app])
