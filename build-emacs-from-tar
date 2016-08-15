@@ -85,6 +85,7 @@ end
 arch=:x86_64
 parallel=false
 brew_gitrev=nil
+disable_brew=false
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
@@ -92,6 +93,7 @@ brew_gitrev=nil
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on(      "--brew-gitrev REV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev = r }
+  opts.on(      "--no-brew", "Don't attempt to get any extra libraries via brew") { |b| disable_brew = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -121,12 +123,13 @@ options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
+options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
 options[:parallel] = parallel if parallel
 
 out_name = "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
-extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev
+extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev unless disable_brew
 
 binary = build_emacs src_dir, brew_dir, out_name, options
 
-puts "Built #{binary}, #{extra_source}"
+puts "Built #{binary}, #{extra_source||''}"
