@@ -14,6 +14,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
+require 'json'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 
 def with_env(env)
@@ -40,7 +41,12 @@ def ensure_brew(dir, packages, options)
 
     with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
       packages.each do |package|
-        vsh.systemr(*%W"brew upgrade #{package}") || vsh.systemr(*%W"brew install #{package}") || abort("Couldn't install or upgrade")
+        info = IO.popen(%W"brew info --json=v1 #{package}") { |io| JSON.parse(io.read) }[0]
+        if info['linked_keg']
+          vsh.system(*%W"brew upgrade #{package}") if info['outdated']
+        else
+          vsh.system(*%W"brew install #{package}")
+        end
         vsh.system(*%W"brew source #{package} #{get_source}") if get_source
       end
     end
