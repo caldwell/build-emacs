@@ -35,6 +35,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
     configure_flags += ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
+    configure_flags += %W"--with-modules"
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
