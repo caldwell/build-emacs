@@ -93,12 +93,14 @@ arch=:x86_64
 parallel=false
 brew_gitrev=nil
 disable_brew=false
+extra_rev = ''
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
+  opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
   opts.on(      "--brew-gitrev REV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev = r }
   opts.on(      "--no-brew", "Don't attempt to get any extra libraries via brew") { |b| disable_brew = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
@@ -133,7 +135,7 @@ options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
 options[:parallel] = parallel if parallel
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
-out_name = "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
+out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
 extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev unless disable_brew
 

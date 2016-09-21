@@ -31,7 +31,7 @@ def combine(tars, out_app, bin_arch)
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
     tarball = File.basename tarball_path
-    tarball =~                                /^(Emacs-([\d.]+))()-([\d.]+)-([^-]+).tar/ or
+    tarball =~                       /^(Emacs-([\d.]+(?:-\d+)?))()-([\d.]+)-([^-]+).tar/ or
     tarball =~             /^(Emacs-pretest-([\d.]+(?:-rc\d+)?))()-([\d.]+)-([^-]+).tar/ or
     tarball =~ /^(Emacs-(20\d\d-\d\d-\d\d_\d\d-\d\d-\d\d-([^-]+)))-([\d.]+)-([^-]+).tar/ or abort "Couldn't parse version from tarball (#{tarball})"
     base ||= $1
