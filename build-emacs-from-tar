@@ -15,6 +15,7 @@
 
 require 'optparse'
 require 'fileutils'
+require 'pathname'
 require File.join File.expand_path(File.dirname(__FILE__)),'ensure-brew.rb'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 Vsh = VerboseShell
@@ -42,7 +43,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
 
-    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, 'nextstep/Emacs.app/Contents/MacOS/lib') # Install and adjust libs into the App.
+    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -57,17 +58,22 @@ def with_writable_mode(file)
   File.chmod(old, file)
 end
 
-def copy_lib(exe, brew_dir, dest)
+def copy_lib(exe, brew_dir, dest, options={})
+  options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
   `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
     (m,orig,brew_path,lib)=line.match(%r,^\s+(#{brew_dir}(/[^ ]+)/(lib[^/ ]+))\s,).to_a
     if m
       with_writable_mode(exe) {
-        Vsh.system(*%W"install_name_tool -change #{orig} #{brew_path}/#{lib} #{exe}") # remove our local build path name to leak as litle as possible (not that it really matters)
+        if lib == File.basename(exe)
+          Vsh.system(*%W"install_name_tool -id #{dest}/#{lib} #{exe}") # remove our local build path from the id to leak as litle as possible (not that it really matters)
+        else
+          Vsh.system(*%W"install_name_tool -change #{orig} #{options[:rel_path_to_dest]}/#{lib} #{exe}") # Point the libs to the newly embedded lib directory
+        end
       }
       unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
         Vsh.mkdir_p(dest)
         Vsh.cp(File.join(brew_dir, brew_path, lib), dest)
-        copy_lib(File.join(dest, lib), brew_dir, dest) # Copy lib's deps, too
+        copy_lib(File.join(dest, lib), brew_dir, dest, options) # Copy lib's deps, too
       end
     end
   end
@@ -124,6 +130,7 @@ options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
 options[:parallel] = parallel if parallel
+options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
 out_name = "Emacs-#{label}#{version}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
