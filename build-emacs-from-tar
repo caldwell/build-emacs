@@ -31,14 +31,14 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
 
   FileUtils.cd(src_dir) do
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
-    host_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
+    configure_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
     parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
-    site_lisp_flags = ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
+    configure_flags += ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
-    Vsh.system(*(%W"./configure --with-ns")+site_lisp_flags+host_flags+(options[:extra_configure_flags]||[]))
+    Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))
     Vsh.system(*(%W"make clean"))
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
