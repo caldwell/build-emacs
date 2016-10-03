@@ -1,2 +1,4 @@
 *.tar.*
 /emacs-source
+/brew
+/emacs-dmg/More.../* Icon
