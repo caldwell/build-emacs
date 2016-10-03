@@ -15,10 +15,12 @@
 
 require 'optparse'
 require 'shell'
+require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
+Vsh = VerboseShell
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <URL> [options]"
-  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| verbose += 1 }
+  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -47,11 +49,12 @@ end
 latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
 base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
 
-system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
+Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
 
 # Old Mac OS Versions don't have .xz support. Rather than requiring installing it, just convert to .bz2 which *is* supported.
 newfile=File.basename(latest[:file], '.xz')+'.bz2'
 sh=Shell.new
+sh.verbose = Vsh.verbose
 sh.system(*(%W(xzcat #{latest[:file]}))) | sh.system('bzip2') > newfile
 
 #File.unlink(latest[:file]) # Keep the original around for now.
