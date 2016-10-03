@@ -2,3 +2,8 @@
 /emacs-source
 /brew
 /emacs-dmg/More.../* Icon
+.DS_Store
+/Emacs.app
+/combined
+/_dmg-build
+Emacs*.dmg
