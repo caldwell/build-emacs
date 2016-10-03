@@ -72,6 +72,21 @@ final "fat" Emacs.app, then creates a final disk image (`.dmg`). It takes an
 optional `--sign` parameter (`--sign="my identity"`) which makes it code
 sign the Emacs.app.
 
+Example
+-------
+
+    $ ./fetch-emacs-from-ftp -v ftp://ftp.gnu.org/pub/gnu/emacs
+    + curl --continue-at - --silent -O ftp://ftp.gnu.org/pub/gnu/emacs/emacs-25.1.tar.xz
+    shell(#<Th:0x007febed8a48b0>): /usr/local//brew//bin/xzcat emacs-25.1.tar.xz
+    shell(#<Th:0x007febed8a48b0>): /usr/bin/bzip2
+    $ ls *.bz2
+    emacs-25.1.tar.bz2
+    $ ./build-emacs-from-tar -v -j 8 emacs-25.1.tar.bz2 release
+      ... Lots out output snipped ...
+    Built Emacs-25.1-10.12-x86_64.tar.bz2, Emacs-25.1-10.12-x86_64-extra-source.tar
+    $ ./combine-and-package -v Emacs-25.1-10.12-x86_64.tar.bz2
+      ... More output snipped ...
+    created: Emacs-25.1-universal.dmg
 
 License
 -------
