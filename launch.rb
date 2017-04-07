@@ -41,7 +41,7 @@ end
 version = Gem::Version.new(`sw_vers -productVersion`)
 arch=`uname -m`.chomp
 
-emacs = Dir["#{File.dirname($0)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+)$/) && {:arch=>$1, :_version=>$2, :version=>Gem::Version.new($2.gsub('_','.')), :exe=>file} } \
+emacs = Dir["#{__dir__}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.+)$/) && {:arch=>$1, :_version=>$2, :version=>Gem::Version.new($2.gsub('_','.')), :exe=>file} } \
         .select { |v| v[:arch] == arch && v[:version] <= version } \
         .sort { |a,b| a[:version] <=> b[:version] } \
         .last
@@ -58,10 +58,9 @@ if emacs
   # Emacs.app sticks Emacs.app/Contents/MacOS/{bin,libexec} on the end of the PATH when it starts, so if we
   # stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
   # while not affecting any user paths.
-  base_dir=File.expand_path(File.dirname($0))
   arch_version = emacs[:arch] + '-' + emacs[:_version] # see the 'combine-and-package' script in the build-emacs repo
-  ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{arch_version}") +
-                 ':' + File.join(base_dir, "libexec-#{arch_version}")
+  ENV['PATH'] += ':' + File.join(__dir__,     "bin-#{arch_version}") +
+                 ':' + File.join(__dir__, "libexec-#{arch_version}")
   exec [emacs[:exe], emacs[:exe]], *ARGV
 end
 
