@@ -40,6 +40,7 @@ def ensure_brew(dir, packages, options)
     vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
 
     with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
+      vsh.system(*%W"brew update") unless info[:gitrev]
       packages.each do |package|
         info = IO.popen(%W"brew info --json=v1 #{package}") { |io| JSON.parse(io.read) }[0]
         if info['linked_keg']
