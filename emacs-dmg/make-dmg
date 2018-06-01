@@ -30,5 +30,9 @@ rm -f "$OUTPUT_FILE"
 # https://stackoverflow.com/questions/18621467/error-creating-disk-image-using-hdutil
 # https://discussions.apple.com/thread/4712306
 mkdir _dmg-build/.Trashes
-dd if=/dev/zero of=_dmg-build/.Trashes/padding-because-hdiutil-sucks bs=1m count=3
-hdiutil create -srcfolder _dmg-build -volname "$VOLUME_NAME" -format UDBZ "$OUTPUT_FILE"
+MB=1
+while ! hdiutil create -srcfolder _dmg-build -volname "$VOLUME_NAME" -format UDBZ "$OUTPUT_FILE"; do
+    test $MB = 10 && echo '10 MBs of zeros and *still* -5341!' && false
+    dd if=/dev/zero of=_dmg-build/.Trashes/padding-because-hdiutil-sucks bs=1m count=$MB
+    MB=$(($MB+1))
+done
