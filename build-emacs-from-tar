@@ -40,6 +40,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     configure_flags += %W"--with-modules"
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
+    ENV['LIBXML2_CFLAGS']="-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
     Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))
     Vsh.system(*(%W"make clean"))
