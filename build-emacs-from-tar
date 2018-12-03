@@ -30,6 +30,8 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
   ENV["PATH"]="#{brew_dir}/bin:#{ENV["PATH"]}"
 
   FileUtils.cd(src_dir) do
+    Vsh.system("if ! -f configure; then ./autogen.sh; fi")
+
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     configure_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
     parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
