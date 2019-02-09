@@ -84,7 +84,7 @@ def prepare_extra_deps(brew_dir, out_name, options)
   extra_source = "#{out_name}-extra-source"
   Vsh.rm_rf extra_source
   ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :verbose => Vsh.verbose) # build deps
-  ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi) + [{'gnutls' => ['--without-p11-kit']}], # gnutls 3.5.18 is failing to compile with p11-kit, so dump it
+  ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi gnutls),
                                         :gitrev => options[:brew_gitrev], :get_source => extra_source, :verbose => Vsh.verbose,
                                         :extra_args=>['--build-bottle']) # build-bottle makes brew compile with -march=core2, which will let old hardware work.
   Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
