@@ -51,7 +51,10 @@ def ensure_brew(dir, packages, options)
         end
         info = IO.popen(%W"brew info --json=v1 #{package}") { |io| JSON.parse(io.read) }[0]
         if info['linked_keg']
-          vsh.system(*(%W"brew upgrade #{package}" + extra_args)) if info['outdated']
+          if info['outdated'] # brew upgrade doesn't support --build-bottle
+            vsh.system(*(%W"brew uninstall #{package}"))
+            vsh.system(*(%W"brew install #{package}" + extra_args))
+          end
         else
           vsh.system(*(%W"brew install #{package}" + extra_args))
         end
