@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 #  Copyright © 2014-2016 David Caldwell
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,6 +31,8 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
   ENV["PATH"]="#{brew_dir}/bin:#{ENV["PATH"]}"
 
   FileUtils.cd(src_dir) do
+    Vsh.system("if ! -f configure; then ./autogen.sh; fi")
+
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     configure_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
     parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
@@ -38,6 +41,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     configure_flags += %W"--with-modules"
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
+    ENV['LIBXML2_CFLAGS']="-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
     Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))
     Vsh.system(*(%W"make clean"))
