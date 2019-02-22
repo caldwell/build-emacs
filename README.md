@@ -29,6 +29,13 @@ the "xz" program on the machines that runs "fetch-emacs-from-ftp". The
 easiest way to get it is through [homebrew](http://brew.sh/): "brew install xz"
 
 
+### XCode Command Line Tools
+
+Building emacs requires that the XCode command line tools be installed so that
+some libraries (libxml2, at least) are available.
+
+    xcode-select --install
+
 Usage
 -----
 
