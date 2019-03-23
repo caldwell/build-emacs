@@ -132,7 +132,7 @@ end
 def make_dmg(out_dmg, app)
   compile_icon(script_base('emacs-dmg/More.../Alternative Icon'), script_base('emacs-dmg/icon'))
   compile_icon(script_base('emacs-dmg/More.../Yosemite Icon'), script_base('emacs-dmg/yosemite-icon'))
-  Vsh.system *(['bash'] + ($verbose ? ['-x'] : []) +
+  Vsh.system *(['bash'] + (Vsh.verbose ? ['-x'] : []) +
                [script_base('emacs-dmg/make-dmg'), out_dmg, 'Emacs', app] +
                %W[Applications Heroes.rtf More... background.png dot-DS_Store].map{|f| script_base('emacs-dmg', f) })
 end
