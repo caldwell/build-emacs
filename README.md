@@ -36,6 +36,20 @@ some libraries (libxml2, at least) are available.
 
     xcode-select --install
 
+Currently, Homebrew installs a pkg-config definition for the built in
+libxml2, but uses deprecated paths that don't exist by default on newer
+MacOS versions (10.14 at least). The symptom is this error:
+
+      CC       xml.o
+    xml.c:26:10: fatal error: 'libxml/tree.h' file not found
+    #include <libxml/tree.h>
+             ^~~~~~~~~~~~~~~
+    1 error generated.
+
+To fix it, run this:
+
+    sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+
 Usage
 -----
 
