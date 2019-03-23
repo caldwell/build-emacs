@@ -21,7 +21,8 @@ while [ x"$1" != x ]; do
     shift;
 done
 
-SetFile -a Vc _dmg-build/background.*
+set -- _dmg-build/background.*
+test -f "$1" && SetFile -a Vc _dmg-build/background.*
 rm -f tmp.dmg
 ## For Creating the initial .DSStore:
 # hdiutil create -size 200m -volname "Emacs" -fs HFS+J writable.dmg
