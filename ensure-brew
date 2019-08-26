@@ -64,6 +64,20 @@ def ensure_brew(dir, packages, options)
   end
 end
 
+def link_in_brew(dir, packages, options)
+  vsh = VerboseShell
+  vsh.verbose = options[:verbose]
+
+  FileUtils.cd(dir) do
+    with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
+      packages.each do |package|
+        extra_args = options[:extra_args] || []
+        vsh.system(*(%W"brew link #{package}" + extra_args))
+      end
+    end
+  end
+end
+
 if $0 == __FILE__
   gitrev = nil
   get_source = nil
