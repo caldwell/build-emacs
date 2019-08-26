@@ -45,6 +45,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     Vsh.system(*(%W"make install"))
 
     copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+    copy_imagemagick_modules('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install ImageMagick modules into the App.
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -80,13 +81,19 @@ def copy_lib(exe, brew_dir, dest, options={})
   end
 end
 
+def copy_imagemagick_modules(exe, brew_dir, dest, options={})
+  Vsh.cp_r(File.join(brew_dir, "lib/ImageMagick"), dest)
+end
+
 def prepare_extra_deps(brew_dir, out_name, options)
   extra_source = "#{out_name}-extra-source"
   Vsh.rm_rf extra_source
   ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :verbose => Vsh.verbose) # build deps
-  ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi gnutls),
+  ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi gnutls imagemagick@6),
                                         :gitrev => options[:brew_gitrev], :get_source => extra_source, :verbose => Vsh.verbose,
                                         :extra_args=>['--build-bottle']) # build-bottle makes brew compile with -march=core2, which will let old hardware work.
+  link_in_brew(brew_dir, %w(imagemagick@6), :verbose => Vsh.verbose, # imagemagick@6 is keg-only, link it manually
+                                            :extra_args => ['--force'])
   Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
   "#{extra_source}.tar"
 end

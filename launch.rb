@@ -66,6 +66,11 @@ if emacs
   arch_version = emacs[:arch] + '-' + emacs[:_version] # see the 'combine-and-package' script in the build-emacs repo
   ENV['PATH'] += ':' + File.join(base_dir,     "bin-#{arch_version}") +
                  ':' + File.join(base_dir, "libexec-#{arch_version}")
+  # These environment variables are required for ImageMagick to successfully find it's modules
+  lib_dir = File.join(base_dir, "lib-#{arch_version}")
+  ENV['DYLD_LIBRARY_PATH'] = lib_dir
+  ENV['MAGICK_CONFIGURE_PATH'] = File.join(lib_dir, "ImageMagick/config-Q16")
+  ENV['MAGICK_CODER_MODULE_PATH'] = File.join(lib_dir, 'ImageMagick/modules-Q16/coders')
   exec [emacs[:exe], emacs[:exe]], *ARGV
 end
 
