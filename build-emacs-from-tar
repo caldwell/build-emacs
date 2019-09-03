@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 #  Copyright © 2014-2016 David Caldwell
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -35,7 +36,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
     configure_flags += ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
-    configure_flags += %W"--with-modules"
+    configure_flags += %W"--with-modules --disable-acl --without-makeinfo"
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
@@ -121,7 +122,7 @@ brew_dir = File.expand_path("brew")
 Vsh.rm_rf src_dir
 Vsh.mkdir_p src_dir
 FileUtils.cd(src_dir) do
-  Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
+  Vsh.system(*%W'tar xf #{"../"+source_tar}')
 end
 
 os_maj_version = `sw_vers -productVersion`.chomp.sub(/^(\d+\.\d+)\.\d+/,'\1')
@@ -133,7 +134,7 @@ options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
-options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
+#options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
 options[:parallel] = parallel if parallel
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
