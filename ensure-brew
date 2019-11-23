@@ -39,7 +39,8 @@ def ensure_brew(dir, packages, options)
   FileUtils.cd(dir) do
     vsh.system(*%W"git checkout #{options[:gitrev]}") || abort("git failed!") if options[:gitrev]
 
-    with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}" do
+    with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}",
+             'HOMEBREW_NO_AUTO_UPDATE' => '1' do
       vsh.system(*%W"brew update") unless options[:gitrev]
       vsh.system(*%W"brew tap homebrew/core") # This *actually* installs brew the first time, and does nothing subsequent times.
       packages.each do |_package|
