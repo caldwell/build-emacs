@@ -20,6 +20,11 @@ class VerboseShell
     Kernel.system *args
   end
 
+  def self.capture(*args)
+    system_trace *args
+    IO.popen(args + (@verbose == 0 ? [{:err => "/dev/null"}] : []), "r") {|io| io.read}.strip
+  end
+
   def self.mv(src,dest,options={})
     system_trace *%W"mv #{src} #{dest}"
     FileUtils.mv(src, dest, options)
