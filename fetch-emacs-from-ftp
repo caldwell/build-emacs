@@ -14,7 +14,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
-require 'shell'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
 Vsh = VerboseShell
 
@@ -53,8 +52,6 @@ Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
 
 # Old Mac OS Versions don't have .xz support. Rather than requiring installing it, just convert to .bz2 which *is* supported.
 newfile=File.basename(latest[:file], '.xz')+'.bz2'
-sh=Shell.new
-sh.verbose = Vsh.verbose
-sh.system(*(%W(xzcat #{latest[:file]}))) | sh.system('bzip2') > newfile
+Vsh.system('bash', '-c', 'xzcat "$0" | bzip2 > "$1"', latest[:file], newfile)
 
 #File.unlink(latest[:file]) # Keep the original around for now.

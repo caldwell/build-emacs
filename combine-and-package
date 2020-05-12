@@ -14,7 +14,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
-require 'shell'
 require 'fileutils'
 require 'find'
 require 'rubygems'
@@ -87,9 +86,9 @@ end
 
 def add_nightly_version_to_info_plist(app, git_rev)
   sh = Shell.new
-  info = JSON.parse(sh.system(*%W"plutil -convert json #{app}/Contents/Info.plist -o -").to_s)
+  info = JSON.parse(Vsh.capture(*%W"plutil -convert json #{app}/Contents/Info.plist -o -").to_s)
   info["GitRevision"] = git_rev
-  sh.echo(info.to_json) | sh.system(*%W"plutil -convert xml1 - -o #{app}/Contents/Info.plist")
+  IO.popen(%W"plutil -convert xml1 - -o #{app}/Contents/Info.plist", "w") { |io| io.write(info.to_json) }
 end
 
 def code_sign(app, signer)
