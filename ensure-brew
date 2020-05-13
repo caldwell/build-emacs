@@ -16,6 +16,7 @@
 require 'optparse'
 require 'json'
 require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
+Vsh = VerboseShell
 
 def with_env(env)
   saved = {}
@@ -42,7 +43,17 @@ def ensure_brew(dir, packages, options)
     with_env 'PATH' => "#{Dir.pwd}/bin:#{ENV['PATH']}",
              'HOMEBREW_NO_AUTO_UPDATE' => '1' do
       vsh.system(*%W"brew update") unless options[:gitrev]
-      vsh.system(*%W"brew tap homebrew/core") # This *actually* installs brew the first time, and does nothing subsequent times.
+      if options[:tapgitrev]
+        unless File.exist?("Library/Taps/homebrew/homebrew-core")
+          # This is much heavier than the normal `brew tap` (which does --depth=1), but otherwise we can't check out arbitrary revisions.
+          vsh.system(*%W"git clone https://github.com/Homebrew/homebrew-core Library/Taps/homebrew/homebrew-core") || abort("git clone failed!")
+        end
+        FileUtils.cd('Library/Taps/homebrew/homebrew-core') do
+          vsh.system(*%W"git checkout #{options[:tapgitrev]}") || abort("git checkout of tap failed!")
+        end
+      else
+        vsh.system(*%W"brew tap homebrew/core") # This *actually* installs brew the first time, and does nothing subsequent times.
+      end
       packages.each do |_package|
         extra_args = options[:extra_args] || []
         package = _package
@@ -67,6 +78,7 @@ end
 
 if $0 == __FILE__
   gitrev = nil
+  tapgitrev = nil
   get_source = nil
   verbose = nil
 
@@ -74,11 +86,12 @@ if $0 == __FILE__
      opts.banner = "Usage:\n\t#{$0} [options] <DIRECTORY> [<PACKAGE> ...]"
      opts.on("-v", "--verbose",                 "Turn up the verbosity")                          { |v|   verbose = true }
      opts.on(      "--checkout=<GIT_REVISION>", "Checkout a particular git revision of homebrew") { |rev| gitrev = rev }
+     opts.on(      "--checkout-tap=<GIT_REV>",  "Checkout a given git rev of homebrew's core tap"){ |rev| tapgitrev = rev }
      opts.on(      "--get-source=<SOURCE_DIR>", "Also fetch sources into SOURCE_DIR")             { |dir| get_source = dir }
      opts.on_tail("-h", "--help") { puts opts; exit }
    end).parse!
 
   dir    = ARGV.shift || opts.abort("Missing <DIRECTORY>\n\n"+opts.help)
 
-  ensure_brew(dir, ARGV, :gitrev => gitrev, :get_source => get_source, :verbose=>verbose)
+  ensure_brew(dir, ARGV, :gitrev => gitrev, :tapgitrev => tapgitrev, :get_source => get_source, :verbose=>verbose)
 end
