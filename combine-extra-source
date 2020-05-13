@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 set -x
 
 base="${1?Usage: $0 base-name}"
