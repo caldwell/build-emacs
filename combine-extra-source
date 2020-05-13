@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -x
+
+base="${1?Usage: $0 base-name}"
+
+es="${base}-extra-source"
+rm -rf  "$es"
+mkdir -p "$es/archives"
+
+for ar in label=*/*.tar; do
+    (cd "$es/archives" && tar xf ../../"$ar" --strip-components 1)
+    for f in $(tar tf "$ar" "*.tar.*"); do
+        echo "$f"
+        n=$(basename "$f")
+        d=$(dirname "$f")
+        d=${d#$base-}
+        d=${d%-extra-source}
+        mkdir -p "$es/$d"
+        ln -sf "../archives/$n" "$es/$d/"
+    done
+done
+
+tar cf "$es.tar" "$es"
+rm -rf "$es"
