@@ -83,9 +83,9 @@ end
 def prepare_extra_deps(brew_dir, out_name, options)
   extra_source = "#{out_name}-extra-source"
   Vsh.rm_rf extra_source
-  ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :verbose => Vsh.verbose) # build deps
+  ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :tapgitrev => options[:brew_tapgitrev], :verbose => Vsh.verbose) # build deps
   ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi gnutls),
-                                        :gitrev => options[:brew_gitrev], :get_source => extra_source, :verbose => Vsh.verbose,
+                                        :gitrev => options[:brew_gitrev], :tapgitrev => options[:brew_tapgitrev], :get_source => extra_source, :verbose => Vsh.verbose,
                                         :extra_args=>['--build-bottle']) # build-bottle makes brew compile with -march=core2, which will let old hardware work.
   Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
   "#{extra_source}.tar"
@@ -94,6 +94,7 @@ end
 arch=:x86_64
 parallel=false
 brew_gitrev=nil
+brew_tapgitrev=nil
 disable_brew=false
 extra_rev = ''
 
@@ -103,7 +104,7 @@ extra_rev = ''
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
-  opts.on(      "--brew-gitrev REV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev = r }
+  opts.on(      "--brew-gitrev REV,TAPREV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev, brew_tapgitrev = r.split(',') }
   opts.on(      "--no-brew", "Don't attempt to get any extra libraries via brew") { |b| disable_brew = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
@@ -139,7 +140,7 @@ options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_versio
 
 out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
-extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev unless disable_brew
+extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev, :brew_tapgitrev => brew_tapgitrev unless disable_brew
 
 binary = build_emacs src_dir, brew_dir, out_name, options
 
