@@ -85,7 +85,6 @@ def combine(tars, out_app, bin_arch)
 end
 
 def add_nightly_version_to_info_plist(app, git_rev)
-  sh = Shell.new
   info = JSON.parse(Vsh.capture(*%W"plutil -convert json #{app}/Contents/Info.plist -o -").to_s)
   info["GitRevision"] = git_rev
   IO.popen(%W"plutil -convert xml1 - -o #{app}/Contents/Info.plist", "w") { |io| io.write(info.to_json) }
