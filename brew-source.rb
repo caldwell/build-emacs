@@ -27,6 +27,6 @@ def fetch_source_and_deps(formula, dest)
 end
 
 ARGV.each do |package|
-  formula = Formulary.find_with_priority(package)
+  formula = Formulary.factory(package)
   fetch_source_and_deps(formula, dest)
 end
