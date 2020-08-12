@@ -60,6 +60,8 @@ def combine(tars, out_app, bin_arch)
     arch_version = emacs[:arch] + '-' + emacs[:mac_os].to_s.gsub('.','_')
     Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs'),
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}"))
+    Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs.pdmp'),
+             File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/bin'),
              File.join(out_app,     "Contents/MacOS/bin-#{arch_version}"))
     Vsh.cp_r(File.join(emacs[:app], "Contents/MacOS/lib-#{arch_version}"),
