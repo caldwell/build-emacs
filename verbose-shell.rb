@@ -34,16 +34,18 @@ class VerboseShell
       system_trace *args
       args, opts = args.last.is_a?(Hash) ? [args[0..-2], args.last.dup] : [args, {}]
       if opts.delete(:loud) or @verbose > 0
-        Kernel.system(*args, opts) or raise ShellError.new('', args, $?.exitstatus).message.lstrip
+        Kernel.system(*args, opts) or raise ShellError.new('', args, $?.exitstatus)
       else
         output = IO.popen(args, opts.merge({:err => [:child, :out]})) {|io| io.read}
         raise ShellError.new(output, args, $?.exitstatus) if $? != 0
       end
+      $?
     end
 
-    def system_or_true(*args)
+    def system_noraise(*args)
       system *args
-    rescue
+    rescue ShellError => e
+      e.exit_code
     end
 
     def capture(*args) # ``
