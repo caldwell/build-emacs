@@ -16,8 +16,8 @@
 require 'optparse'
 require 'fileutils'
 require 'pathname'
-require File.join File.expand_path(File.dirname(__FILE__)),'ensure-brew.rb'
-require File.join File.expand_path(File.dirname(__FILE__)),'verbose-shell.rb'
+require_relative 'ensure-brew'
+require_relative 'verbose-shell'
 Vsh = VerboseShell
 
 def build_emacs(src_dir, brew_dir, out_name, options={})
