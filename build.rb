@@ -80,15 +80,11 @@ class Build
     end
 
     def make
-      Vsh.chdir(build_dir) {
-        Vsh.system(*%W"make -j 4", *extra_make_args)
-      }
+      Vsh.system(*%W"make -C #{build_dir} -j 4", *extra_make_args)
     end
 
     def install
-      Vsh.chdir(build_dir) {
-        Vsh.system(*%W"make install")
-      }
+      Vsh.system(*%W"make -C #{build_dir} install")
     end
 
     def download_url_to_file(dest, url)
