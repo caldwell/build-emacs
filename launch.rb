@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# Copyright © 2012-2016 David Caldwell <david@porkrind.org>
+# Copyright © 2012-2021 David Caldwell <david@porkrind.org>
 #
 # This launcher code is from emacsformacosx.com and is not part of Emacs
 # proper. It exists so that there can be a single download that contains
