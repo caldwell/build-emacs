@@ -16,18 +16,18 @@
 require 'optparse'
 require 'fileutils'
 require 'pathname'
-require_relative 'ensure-brew'
+require_relative 'build-dependencies'
 require_relative 'verbose-shell'
 Vsh = VerboseShell
 
-def build_emacs(src_dir, brew_dir, out_name, options={})
+def build_emacs(src_dir, dep_dir, out_name, options={})
   out_name = out_name + ".tar.bz2"
   puts "building emacs: #{src_dir} => #{out_name}"
   options[:cc] ||= "cc"
   options[:extra_cc_options] ||= ''
 
-  ENV["PKG_CONFIG_PATH"]="#{brew_dir}/lib/pkgconfig:#{ENV["PKG_CONFIG_PATH"]}"
-  ENV["PATH"]="#{brew_dir}/bin:#{ENV["PATH"]}"
+  ENV["PKG_CONFIG_PATH"]="#{dep_dir}/lib/pkgconfig:#{ENV["PKG_CONFIG_PATH"]}"
+  ENV["PATH"]="#{dep_dir}/bin:#{ENV["PATH"]}"
 
   FileUtils.cd(src_dir) do
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
@@ -44,7 +44,7 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
 
-    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -59,10 +59,10 @@ def with_writable_mode(file)
   File.chmod(old, file)
 end
 
-def copy_lib(exe, brew_dir, dest, options={})
+def copy_lib(exe, dep_dir, dest, options={})
   options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
   `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
-    (m,orig,brew_path,lib)=line.match(%r,^\s+(#{brew_dir}(/[^ ]+)/(lib[^/ ]+))\s,).to_a
+    (m,orig,dep_path,lib)=line.match(%r,^\s+(#{dep_dir}(/[^ ]+)/(lib[^/ ]+))\s,).to_a
     if m
       with_writable_mode(exe) {
         if lib == File.basename(exe)
@@ -73,29 +73,26 @@ def copy_lib(exe, brew_dir, dest, options={})
       }
       unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
         Vsh.mkdir_p(dest)
-        Vsh.cp(File.join(brew_dir, brew_path, lib), dest)
-        copy_lib(File.join(dest, lib), brew_dir, dest, options) # Copy lib's deps, too
+        Vsh.cp(File.join(dep_dir, dep_path, lib), dest)
+        copy_lib(File.join(dest, lib), dep_dir, dest, options) # Copy lib's deps, too
       end
     end
   end
 end
 
-def prepare_extra_deps(brew_dir, out_name, options)
+def prepare_extra_deps(dep_dir, out_name)
   extra_source = "#{out_name}-extra-source"
   Vsh.rm_rf extra_source
-  ensure_brew(brew_dir, %w(pkg-config), :gitrev => options[:brew_gitrev], :tapgitrev => options[:brew_tapgitrev], :verbose => Vsh.verbose) # build deps
-  ensure_brew(brew_dir, %w(libtasn1 gmp nettle libunistring libffi gnutls jansson),
-                                        :gitrev => options[:brew_gitrev], :tapgitrev => options[:brew_tapgitrev], :get_source => extra_source, :verbose => Vsh.verbose,
-                                        :extra_args=>['--build-bottle']) # build-bottle makes brew compile with -march=core2, which will let old hardware work.
+  build_dep = BuildDependencies.new(dep_dir)
+  build_dep.ensure()
+  build_dep.export_sources(extra_source)
   Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
   "#{extra_source}.tar"
 end
 
 arch=:x86_64
 parallel=false
-brew_gitrev=nil
-brew_tapgitrev=nil
-disable_brew=false
+disable_deps=false
 extra_rev = ''
 
 (opts=OptionParser.new do |opts|
@@ -104,8 +101,7 @@ extra_rev = ''
   opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
-  opts.on(      "--brew-gitrev REV,TAPREV", "Use a particular brew git hash so deps are locked") { |r| brew_gitrev, brew_tapgitrev = r.split(',') }
-  opts.on(      "--no-brew", "Don't attempt to get any extra libraries via brew") { |b| disable_brew = true }
+  opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -117,7 +113,7 @@ version = source_tar =~ %r{^(?:.*/)?emacs-(.*)\.tar} && $1 || throw("couldn't pa
 trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
 
 src_dir = 'emacs-source'
-brew_dir = File.expand_path("brew")
+dep_dir = File.expand_path("dep")
 
 Vsh.rm_rf src_dir
 Vsh.mkdir_p src_dir
@@ -134,14 +130,14 @@ options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
-options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_brew
+options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:parallel] = parallel if parallel
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
 out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
-extra_source = prepare_extra_deps brew_dir, out_name, :brew_gitrev => brew_gitrev, :brew_tapgitrev => brew_tapgitrev unless disable_brew
+extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
 
-binary = build_emacs src_dir, brew_dir, out_name, options
+binary = build_emacs src_dir, dep_dir, out_name, options
 
 puts "Built #{binary}, #{extra_source||''}"
