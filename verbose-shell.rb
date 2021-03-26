@@ -1,68 +1,90 @@
+# coding: utf-8
 require 'fileutils'
 
+def bright_white_on_red(msg)
+  "\e[97;41m#{msg}\e[0m"
+end
+
 class VerboseShell
-  @@verbose = nil
-  def self.verbose;     @@verbose;     end
-  def self.verbose=(v); @@verbose = v; end
+  @verbose = 0
+  class << self
+    attr_accessor :verbose
+    def verbose=(val); @verbose = val == true ? 1 : (val || 0); end
 
-  def self.system_trace(*args)
-    return unless @@verbose
-    puts "+ "+args.map{|a| a =~ /\s/ ? '"'+a+'"' : a}.join(' ')
-  end
+    def system_trace(*args)
+      return unless @verbose > 0
+      puts "+ "+args.map{|a| a =~ /\s/ ? '"'+a+'"' : a}.join(' ') # TODO: Fix quoting so it's more shell-like
+    end
 
-  def self.system(*args)
-    system_trace *args
-    Kernel.system *args or abort "#{args[0]} failed"
-  end
+    class ShellError < RuntimeError
+      attr_accessor :output, :cmd, :exit_code
+      def initialize(output, cmd, exit_code)
+        @output = output
+        @cmd = cmd
+        @exit_code = exit_code
+      end
 
-  def self.systemr(*args)
-    system_trace *args
-    Kernel.system *args
-  end
+      def message
+        "\n\n"+(['']*20+@output.split("\n"))[-20..-1].join("\n").lstrip + "\n"+bright_white_on_red("💩  Command \"#{@cmd[0]}\" returned #{@exit_code}")
+      end
+      def to_s; message; end
+    end
 
-  def self.capture(*args)
-    system_trace *args
-    IO.popen(args + (@verbose == 0 ? [{:err => "/dev/null"}] : []), "r") {|io| io.read}.strip
-  end
+    def system(*args)
+      system_trace *args
+      args, opts = args.last.is_a?(Hash) ? [args[0..-2], args.last.dup] : [args, {}]
+      if opts.delete(:loud) or @verbose > 0
+        Kernel.system(*args, opts) or raise ShellError.new('', args, $?.exitstatus).message.lstrip
+      else
+        output = IO.popen(args, opts.merge({:err => [:child, :out]})) {|io| io.read}
+        raise ShellError.new(output, args, $?.exitstatus) if $? != 0
+      end
+    end
 
-  def self.mv(src,dest,options={})
-    system_trace *%W"mv #{src} #{dest}"
-    FileUtils.mv(src, dest, options)
-  end
+    def system_or_true(*args)
+      system *args
+    rescue
+    end
 
-  def self.chmod(mode,list,options={})
-    list = [list] unless list.class == Array
-    system_trace *%W"chmod #{mode} "+list
-    FileUtils.chmod(mode, list, options)
-  end
+    def capture(*args) # ``
+      system_trace *args
+      IO.popen(args + (@verbose == 0 ? [{:err => "/dev/null"}] : []), "r") {|io| io.read}.strip
+    end
 
-  def self.cp(src,dest,options={})
-    system_trace *%W"cp #{src} #{dest}"
-    FileUtils.cp(src, dest, options)
-  end
+    def which?(exe)
+      system_trace 'which', exe
+      [exe, *ENV['PATH'].split(File::PATH_SEPARATOR).map {|p| File.join(p, exe)}].find {|f| File.executable?(f)}
+    end
 
-  def self.cp_r(src,dest,options={})
-    system_trace *%W"cp -r #{src} #{dest}"
-    FileUtils.cp_r(src, dest, options)
-  end
+    def install_D(source, dest)
+      system_trace 'install', '-D', source, dest
+      FileUtils.mkdir_p(File.dirname(dest))
+      FileUtils.install(source, dest)
+    end
 
-  def self.ln_s(src,dest,options={})
-    system_trace *%W"ln -s #{src} #{dest}"
-    FileUtils.ln_s(src, dest, options)
-  end
+    def method_to_a(method)
+      a = method.to_s.split('_')
+      a[1] = "-#{a[1]}" if a[1]
+      a
+    end
 
-  def self.rm_rf(file,options={})
-    system_trace *%W"rm -rf #{file}"
-    FileUtils.rm_rf file, options
-  end
+    def chmod_formatter(method, mode, file)
+      method_to_a(method) + [mode.class == String ? mode : sprintf("%04o", mode)] + (file.class == Array ? file : [file])
+    end
+    def chmod_R_formatter(method, mode, file)
+      chmod_formatter(method, mode, file)
+    end
+    def chown_formatter(method, user, group, file)
+      method_to_a(method) + [[user,group && ":#{group}"].select{|x|x}.join('')] + (file.class == Array ? file : [file])
+    end
+    def chown_R_formatter(method, user, group, file)
+      chown_formatter(method, user, group, file)
+    end
 
-  def self.mkdir_p(file,options={})
-    system_trace *%W"mkdir -p #{file}"
-    FileUtils.mkdir_p file, options
-  end
-
-  def self.chdir(dir)
-    system_trace *%W"chdir #{dir}"
-    Dir.chdir dir
+    def method_missing(method, *args, &block)
+      system_trace self.respond_to?("#{method}_formatter") ? self.send("#{method}_formatter", method, *args)
+                   : method_to_a(method) + args
+      FileUtils.send(method, *args, &block)
+    end
   end
 end
