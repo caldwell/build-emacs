@@ -65,8 +65,10 @@ class Build
       puts "==> Building #{@name}-#{@version}" if Vsh.verbose
       prep_build_dir()
       configure(prefix)
-      make()
-      install()
+      if needs_make?
+        make()
+        install()
+      end
     end
 
     def configure(prefix)
@@ -77,6 +79,10 @@ class Build
         Vsh.system(*configure_command)
       }
       File.write("#{build_dir}.configured", conf_hash)
+    end
+
+    def needs_make?
+      Vsh.system_noraise(*%W"make -C #{build_dir} -q", *extra_make_args) != 0
     end
 
     def make
