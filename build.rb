@@ -50,8 +50,10 @@ class Build
     def prep_build_dir
       Vsh.mkdir_p("build") unless File.exist? "build"
       unless File.exist? build_dir
-        unpack(archive_path, build_dir)
-        patches.each {|patch| Vsh.system(*%W"patch -p0 -d #{build_dir} -i #{File.expand_path(patch, File.dirname(__FILE__))}") }
+        Vsh.rm_rf "#{build_dir}.unpatched"
+        unpack(archive_path, "#{build_dir}.unpatched")
+        patches.each {|patch| Vsh.system(*%W"patch -p0 -d #{build_dir}.unpatched -i #{File.expand_path(patch, File.dirname(__FILE__))}") }
+        Vsh.mv "#{build_dir}.unpatched", build_dir
       end
     end
 
