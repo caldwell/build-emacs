@@ -90,7 +90,7 @@ def prepare_extra_deps(dep_dir, out_name)
   "#{extra_source}.tar"
 end
 
-arch=:x86_64
+arch=`uname -m`.chomp.to_sym
 parallel=false
 disable_deps=false
 extra_rev = ''
@@ -98,7 +98,7 @@ extra_rev = ''
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
-  opts.on("-a", "--arch ARCH", [:i386, :x86_64], "Compile for ARCH instead of x86_64") { |a| arch = a }
+  opts.on("-a", "--arch ARCH", [:i386, :x86_64, :arm64], "Compile for ARCH instead of #{arch.to_s}") { |a| arch = a }
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
   opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
