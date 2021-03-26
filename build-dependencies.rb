@@ -35,7 +35,8 @@ class BuildDependencies
                               (arm ? %W"--build=aarch64-apple-darwin#{kernel_version}" : []) },
       { source: "https://ftp.gnu.org/pub/gnu/gettext/gettext-0.21.tar.gz" },
       { source: "https://www.gnupg.org/ftp/gcrypt/gnutls/v3.6/gnutls-3.6.15.tar.xz",
-        extra_configure_args: %W"--with-included-unistring --with-included-libtasn1 --without-p11-kit" },
+        extra_configure_args: %W"--with-included-unistring --with-included-libtasn1 --without-p11-kit",
+        patches: %W"patches/gnutls-fallthrough.patch" },
 
       { source: "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz" }
         .merge(arm ? { extra_configure_args: %W"--build=aarch64-apple-darwin#{kernel_version}" } : {}),
