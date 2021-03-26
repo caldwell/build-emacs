@@ -131,6 +131,7 @@ options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
+options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
 options[:parallel] = parallel if parallel
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
