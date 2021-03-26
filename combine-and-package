@@ -105,7 +105,7 @@ def code_sign(app, signer)
         IO.write(path, IO.read(path).sub!(%r'^#! /','#!/'))
       end
     end
-    Vsh.system *%W"codesign --deep --sign #{signer} #{app}"
+    Vsh.system *%W"codesign -f --deep --sign #{signer} #{app}"
   end
 end
 
