@@ -46,6 +46,10 @@ def build_emacs(src_dir, brew_dir, out_name, options={})
 
     copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', brew_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
 
+    Dir.glob("nextstep/Emacs.app/Contents/Resources/man/man1/*.gz") do |filename|
+      Vsh.system(*(%W"gunzip #{filename}"))
+    end
+
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
   Vsh.mv(File.join(src_dir, 'nextstep', out_name), out_name, :force => true)
