@@ -17,7 +17,7 @@
 # Bug reports for this launcher should go here:
 #   https://github.com/caldwell/build-emacs
 #
-# Licence:
+# License:
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ emacs = Dir["#{File.dirname(exe)}/Emacs-*"].map { |file| file.match(/^.*-(.+)-(.
         .sort { |a,b| a[:version] <=> b[:version] } \
         .last
 
-# This dedups environment variables. Mac OS X 10.10 (Yosemite) always gives
+# This dedupes environment variables. Mac OS X 10.10 (Yosemite) always gives
 # us 2 PATHs(!!)  See: https://github.com/caldwell/build-emacs/issues/39
 # Ruby is written such that the last key wins, which is what we want since
 # the first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
