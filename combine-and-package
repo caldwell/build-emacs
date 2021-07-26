@@ -60,14 +60,16 @@ def combine(tars, out_app, bin_arch)
     arch_version = emacs[:arch] + '-' + emacs[:mac_os].to_s.gsub('.','_')
     Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs'),
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}"))
-    Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs.pdmp'),
-             File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp"))
+    Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs.pdmp'), # As of 5dd2d50f3d5e65b85c87da86e2e8a6d087fe5767 this is now in libexec
+             File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp")) if File.exists?(File.join(emacs[:app], "Contents/MacOS/Emacs.pdmp"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/bin'),
              File.join(out_app,     "Contents/MacOS/bin-#{arch_version}"))
     Vsh.cp_r(File.join(emacs[:app], "Contents/MacOS/lib-#{arch_version}"),
              File.join(out_app,     "Contents/MacOS/lib-#{arch_version}")) if File.exists?(File.join(emacs[:app], "Contents/MacOS/lib-#{arch_version}"))
     Vsh.cp_r(File.join(emacs[:app], 'Contents/MacOS/libexec'),
              File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}"))
+    Vsh.mv(  File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"), # FIXME: See if we can configure a custom libexec w/arch_version `C-h v exec-directory`
+             File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp")) if File.exists?(File.join(out_app, "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"))
     if bin_arch && bin_arch.gsub('.','_') == arch_version
       Vsh.ln_s("bin-#{arch_version}",
                File.join(out_app,     'Contents/MacOS/bin'))
