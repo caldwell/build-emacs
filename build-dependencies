@@ -20,16 +20,18 @@ require_relative 'build-dependencies'
 
 Vsh = VerboseShell
 
+$all = false
 (opts=OptionParser.new do |opts|
    me = File.basename($0)
    opts.banner = <<-USAGE
 Usage:
     #{me} [-v]
     #{me} [-v] clean
-    #{me} [-v] export-sources <dir>
+    #{me} [-v] export-sources [--all] <dir>
   USAGE
 
    opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
+   opts.on("-a", "--all", "Export build dependencies, too") { |a| $all = true }
    opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -38,7 +40,7 @@ build = BuildDependencies.new("dep")
 if ARGV[0] == "clean"
   build.clean()
 elsif ARGV[0] == "export-sources"
-  build.export_sources(ARGV[1] || raise(opts.banner))
+  build.export_sources(ARGV[1] || raise(opts.banner), $all)
 else
   build.ensure()
 end
