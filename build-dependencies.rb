@@ -71,6 +71,7 @@ class BuildDependencies
     @deps.each {|dep|
       dep.fetch
       if all || !dep.builddep
+        Vsh.rm_f(File.join(dir, File.basename(dep.archive_path)))
         Vsh.ln(dep.archive_path, dir)
       end
     }
