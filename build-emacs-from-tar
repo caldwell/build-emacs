@@ -122,6 +122,7 @@ FileUtils.cd(src_dir) do
 end
 
 os_maj_version = `sw_vers -productVersion`.chomp.sub(/^(\d+\.\d+)\.\d+/,'\1')
+os_maj_version = $1 if os_maj_version =~ /^(\d+)\./ && $1.to_i > 10 # After 10.15.x Apple moved to 11.x, 12.x, etc.
 
 options = arch == :i386    ? { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host => 'i686-apple-darwin',    :min_os => '10.5' } :
                              { }
