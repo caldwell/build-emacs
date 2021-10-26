@@ -41,6 +41,12 @@ end
 version = Gem::Version.new(`sw_vers -productVersion`)
 arch=`uname -m`.chomp
 
+# For some reason the "Open using Rosetta" option gets set on arm machines. This causes `uname` to report
+# x86_64 and the x86_64 binary crashes under Rosetta for reasons I don't understand. This confuses people so
+# lets just undercut the Finder checkbox and run the proper native exe.
+rosetta=`sysctl -in sysctl.proc_translated`.chomp == "1"
+arch='arm64' if arch == 'x86_64' && rosetta
+
 # Support direct symlinks to Emacs.app/Contents/MacOS/Emacs
 exe = $0
 while (File.symlink? exe) do; exe = File.readlink exe; end
