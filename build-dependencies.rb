@@ -69,6 +69,7 @@ class BuildDependencies
   def export_sources(dir, all=false)
     Vsh.mkdir_p(dir)
     @deps.each {|dep|
+      dep.fetch
       if all || !dep.builddep
         Vsh.ln(dep.archive_path, dir)
       end
