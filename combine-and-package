@@ -80,8 +80,8 @@ def combine(tars, out_app, bin_arch)
     end
   end
 
-  Vsh.cp(script_base('launch.rb'),
-         File.join(out_app, "Contents/MacOS/Emacs"))
+  Vsh.cp(script_base('launch'),    File.join(out_app, "Contents/MacOS/Emacs"))
+  Vsh.cp(script_base('launch.rs'), File.join(out_app, "Contents/MacOS/launch.rs"))
 
   add_nightly_version_to_info_plist(out_app, emacsen[0][:git_rev]) if emacsen[0][:git_rev] != ''
 
