@@ -124,20 +124,69 @@ fn launch() -> Result<(), Box<dyn Error>> {
             .exec())?
     }
 
-    osascript(r#"
-      tell application "System Events"
-        activate
-        display dialog "This application will not run on your computer. Sorry!"
-      end tell
-    "#)
+    show_dialog("This application will not run on your computer. Sorry!",
+                &format!("The Emacs Launcher detected OS version {} on {} architecture.\n\nThe detected Emacs binaries are:\n{}",
+                         version, arch,
+                         match candidates.iter().map(|v| format!("• arch {}, min OS {}\n", v.arch, v.version)).collect::<Vec<String>>().join("") {
+                             s if s == "" => String::from("None. :-("),
+                             s => s,
+                         }
+                ));
    Ok(())
 }
 
-fn osascript(script: &str) -> Result<(), Box<dyn Error>> {
-    Command::new("osascript").args(script.lines().filter(|line| !line.trim().is_empty()).map(|line| vec!["-e", line]).flatten().collect::<Vec<&str>>()).status()?;
-    Ok(())
-}
 
 fn capture(command: &str) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(Command::new("sh").arg("-c").arg(command).output()?.stdout)?)
+}
+
+extern crate cocoa;
+#[macro_use] extern crate objc;
+
+use cocoa::base::{id, nil};
+use cocoa::foundation::{NSAutoreleasePool, NSString, NSInteger};
+use cocoa::appkit::*;
+
+fn show_dialog(message: &str, info: &str) {
+    unsafe {
+        let _pool = NSAutoreleasePool::new(nil);
+        let app = NSApp();
+        app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+        let alert = NSAlert::alloc(nil).init().autorelease();
+        alert.setMessageText_(ns_string(message));
+        alert.setInformativeText_(ns_string(info));
+        alert.addButtonWithTitle_(ns_string("Quit"));
+        alert.runModal();
+    }
+}
+
+fn ns_string(s: &str) -> id {
+    unsafe { NSString::alloc(nil).init_str(s) }
+}
+
+// This should probably be part of the cocoa crate:
+#[allow(non_snake_case)]
+trait NSAlert: Sized {
+    unsafe fn alloc(_: Self) -> id {
+        msg_send![class!(NSAlert), alloc]
+    }
+    unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id;
+    unsafe fn setMessageText_(self, text: id/*NSString*/) -> id;
+    unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id;
+    unsafe fn runModal(self) -> NSInteger;
+}
+
+impl NSAlert for id {
+    unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id {
+        msg_send![self, setInformativeText: text]
+    }
+    unsafe fn setMessageText_(self, text: id/*NSString*/) -> id {
+        msg_send![self, setMessageText: text]
+    }
+    unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id /* (NSButton *) */ {
+        msg_send![self, addButtonWithTitle: title]
+    }
+    unsafe fn runModal(self) -> NSInteger {
+        msg_send![self, runModal]
+    }
 }
