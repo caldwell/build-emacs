@@ -33,10 +33,6 @@
 //   You should have received a copy of the GNU General Public License
 //   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO:
-//   Run a login shell (so .profile gets run) and steal its environment vars. It's really hard to inject ENV vars
-//   into apps on modern Mac OS, and emacs really needs PATHs and other junk.
-
 use std::error::Error;
 use std::vec::Vec;
 use std::collections::hash_map::HashMap;
@@ -98,14 +94,7 @@ fn launch() -> Result<(), Box<dyn Error>> {
     let emacs = compat.iter().nth(0);
 
     if let Some(emacs) = emacs {
-        // This dedupes environment variables. Mac OS X 10.10 (Yosemite) always gives
-        // us 2 PATHs(!!)  See: https://github.com/caldwell/build-emacs/issues/39
-        // This iterates through such that the last key wins, which is what we want since
-        // the first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
-        let mut env: HashMap<OsString,OsString> = HashMap::new();
-        for (k, v) in std::env::vars_os() {
-            env.insert(k,v);
-        }
+        let mut env = get_shell_environment()?;
 
         // Emacs.app sticks Emacs.app/Contents/MacOS/{bin,libexec} on the end of the PATH when it starts, so if we
         // stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
@@ -138,6 +127,37 @@ fn launch() -> Result<(), Box<dyn Error>> {
 
 fn capture(command: &str) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(Command::new("sh").arg("-c").arg(command).output()?.stdout)?)
+}
+
+use serde_json;
+fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
+    let env_name = OsString::from("EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV");
+    if let Some(_) = std::env::var_os(&env_name) {
+        let mut env = vec![];
+        for (k, v) in std::env::vars_os() {
+            env.push([k,v]);
+        }
+        println!("{}", serde_json::to_string(&env).unwrap());
+
+        std::process::exit(0);
+    }
+
+    fn osstr(s: &str) -> OsString { OsString::from(s) }
+    let env_raw = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
+                                    .env(env_name, "1")
+                                    .output()?.stdout;
+
+    // This dedupes environment variables as a side effect. Mac OS X 10.10
+    // (Yosemite) always gives us 2 PATHs(!!)  See:
+    // https://github.com/caldwell/build-emacs/issues/39 This iterates
+    // through such that the last key wins, which is what we want since the
+    // first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    let mut env: HashMap<OsString,OsString> = HashMap::new();
+    for e in serde_json::from_slice::<Vec<[OsString;2]>>(&env_raw)? {
+        env.insert(e[0].clone(), e[1].clone());
+    }
+
+    Ok(env)
 }
 
 extern crate cocoa;
