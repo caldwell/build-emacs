@@ -17,6 +17,7 @@ require 'optparse'
 require 'fileutils'
 require 'find'
 require 'rubygems'
+require 'pathname'
 require 'json'
 $script_base = File.expand_path(File.dirname(__FILE__))
 def script_base(*path)
@@ -111,6 +112,26 @@ def code_sign(app, signer)
   end
 end
 
+def notarize(dmgpath, apple_id:, apple_password:, team_id: nil)
+  # Submit the dmg for notarization. Note that this does not wait for
+  # a response, the notarization process will succeed or fail over the
+  # next several minutes.
+  #
+  # This uses the dmg, since apple only accepts zips, dmgs, and flat
+  # package. And if we have a dmg, may as well use it.
+
+  # Different versions of xcode shipped different tools for notarization
+  if (Pathname.new Vsh.capture(*%W"xcode-select -p") + "/usr/bin/notarytool").exist?
+    cmd = %W"xcrun notarytool submit '#{dmgpath}' --apple-id '#{apple_id}' --password '#{apple_password}'"
+    cmd += ['--team-id', team_id] if team_id
+  else
+    cmd = %W"xcrun altool --username '#{apple_id}' --password '#{apple_password}' --notarize-app --file '#{dmgpath}' --primary-bundle-id com.emacsformacosx.emacs"
+    cmd += ['--asc-provider', team_id] if team_id
+  end
+
+  Vsh.system *cmd
+end
+
 def osascript(script)
   Vsh.system 'osascript', *script.split(/\n/).map { |line| ['-e', line] }.flatten
 end
@@ -160,3 +181,5 @@ base = combine(emacsen, out_app, bin_arch)
 code_sign(out_app, code_signer) if code_signer
 
 make_dmg("#{base}-universal.dmg", out_app)
+
+notarize("#{base}-universal.dmg", ????)
