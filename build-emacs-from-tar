@@ -129,6 +129,7 @@ options = arch == :i386    ? { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host 
 options[:min_os] =  '10.7' if os_maj_version == '10.8'
 options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
+options[:min_os] =  '11'   if os_maj_version == '12' && arch == :arm64 # Hack around thoughtless upgrade of the build machine to macOS 12 🤦
 options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
