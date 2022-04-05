@@ -32,7 +32,7 @@ rm -f "$OUTPUT_FILE"
 # https://discussions.apple.com/thread/4712306
 mkdir _dmg-build/.Trashes
 MB=1
-while ! hdiutil create -fs 'exfat' -srcfolder _dmg-build -volname "$VOLUME_NAME" -format UDBZ "$OUTPUT_FILE"; do
+while ! hdiutil create -fs 'HFS+' -srcfolder _dmg-build -volname "$VOLUME_NAME" -format UDBZ "$OUTPUT_FILE"; do
     test $MB = 10 && echo '10 MBs of zeros and *still* -5341!' && false
     dd if=/dev/zero of=_dmg-build/.Trashes/padding-because-hdiutil-sucks bs=1m count=$MB
     MB=$(($MB+1))
