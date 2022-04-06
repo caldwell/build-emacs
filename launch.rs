@@ -94,7 +94,11 @@ fn launch() -> Result<(), Box<dyn Error>> {
     let emacs = compat.iter().nth(0);
 
     if let Some(emacs) = emacs {
-        let mut env = get_shell_environment()?;
+        let mut env = if unsafe { getppid() } == 1 { // Our parent process id is 1 when we get launched from Finder (or the Dock, or some other OS way).
+            get_shell_environment()?
+        } else {
+            dedup_environment() // Probably launched from Terminal, inherit env vars in this case.
+        };
 
         // Emacs.app sticks Emacs.app/Contents/MacOS/{bin,libexec} on the end of the PATH when it starts, so if we
         // stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
@@ -147,17 +151,26 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
                                     .env(env_name, "1")
                                     .output()?.stdout;
 
-    // This dedupes environment variables as a side effect. Mac OS X 10.10
-    // (Yosemite) always gives us 2 PATHs(!!)  See:
-    // https://github.com/caldwell/build-emacs/issues/39 This iterates
-    // through such that the last key wins, which is what we want since the
-    // first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    // This dedupes environment variables as a side effect (see comment in dedup_environment())
     let mut env: HashMap<OsString,OsString> = HashMap::new();
     for e in serde_json::from_slice::<Vec<[OsString;2]>>(&env_raw)? {
         env.insert(e[0].clone(), e[1].clone());
     }
 
     Ok(env)
+}
+
+fn dedup_environment() -> HashMap<OsString,OsString> {
+    // This dedupes environment variables. Mac OS X 10.10
+    // (Yosemite) always gives us 2 PATHs(!!)  See:
+    // https://github.com/caldwell/build-emacs/issues/39 This iterates
+    // through such that the last key wins, which is what we want since the
+    // first PATH is always the boring PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    let mut env: HashMap<OsString,OsString> = HashMap::new();
+    for (k, v) in std::env::vars_os() {
+        env.insert(k,v);
+    }
+    env
 }
 
 extern crate cocoa;
@@ -209,4 +222,9 @@ impl NSAlert for id {
     unsafe fn runModal(self) -> NSInteger {
         msg_send![self, runModal]
     }
+}
+
+// This is in the libc crate, but it seems silly to pull in a whole crate for one line:
+extern "C" {
+    pub fn getppid() -> i32;
 }
