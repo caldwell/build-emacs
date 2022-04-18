@@ -26,7 +26,7 @@ class Build
       @source = URI(options[:source])
       @archive_name = File.basename(options[:source])
       m = @archive_name.match(/^([\w-]+)-([\d.-]+)(\.tar.(\w+))$/)
-      raise "couldn't parse #{basename(@source)}" unless m
+      raise "couldn't parse #{@archive_name}" unless m
       @name, @version, @ext, @compress = [m[1], m[2], m[3], m[4]]
       @extra_configure_args = options[:extra_configure_args] || []
       @extra_make_args = options[:extra_make_args] || []
