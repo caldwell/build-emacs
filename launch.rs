@@ -139,7 +139,9 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
     if let Some(_) = std::env::var_os(&env_name) {
         let mut env = vec![];
         for (k, v) in std::env::vars_os() {
-            env.push([k,v]);
+            if k != env_name {
+                env.push([k,v]);
+            }
         }
         println!("{}", serde_json::to_string(&env).unwrap());
 
