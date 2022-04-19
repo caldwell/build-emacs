@@ -46,6 +46,7 @@ use glob::glob;
 use regex::Regex;
 
 fn main() {
+    possibly_dump_environment();
     if let Err(e) = launch() {
         show_dialog("Emacs failed to launch!", &e.to_string())
     }
@@ -133,13 +134,14 @@ fn capture(command: &str) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(Command::new("sh").arg("-c").arg(command).output()?.stdout)?)
 }
 
+const dump_env_name: &str = "EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV";
 use serde_json;
-fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
-    let env_name = OsString::from("EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV");
-    if let Some(_) = std::env::var_os(&env_name) {
+
+fn possibly_dump_environment() {
+   if let Some(_) = std::env::var_os(&dump_env_name) {
         let mut env = vec![];
         for (k, v) in std::env::vars_os() {
-            if k != env_name {
+            if k != dump_env_name {
                 env.push([k,v]);
             }
         }
@@ -147,10 +149,13 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
 
         std::process::exit(0);
     }
+}
 
+fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
     fn osstr(s: &str) -> OsString { OsString::from(s) }
     let env_raw = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
-                                    .env(env_name, "1")
+                                    .env(dump_env_name, "1")
+                                    .stderr(std::process::Stdio::inherit())
                                     .output()?.stdout;
 
     // This dedupes environment variables as a side effect (see comment in dedup_environment())
