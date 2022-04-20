@@ -94,7 +94,7 @@ arch=`uname -m`.chomp.to_sym
 parallel=false
 disable_deps=false
 extra_rev = ''
-add_configure_flags = ''
+add_configure_flags = []
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
@@ -103,7 +103,7 @@ add_configure_flags = ''
   opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
   opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
-  opts.on(      "--add-configure-flags FLAGS", "Additional configure flags(OWN-RISK)") { |c| add_configure_flags = c }
+  opts.on("-A", "--add-configure-flags FLAGS", "Additional configure flags") { |c| add_configure_flags.push(c) }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -136,7 +136,7 @@ options[:extra_configure_flags] ||= []
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
-options[:extra_configure_flags] += add_configure_flags.split(/\s+/)
+options[:extra_configure_flags] += add_configure_flags if ! add_configure_flags.empty?
 options[:parallel] = parallel if parallel
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
