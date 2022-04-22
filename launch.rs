@@ -141,7 +141,7 @@ use serde_json;
 use std::os::unix::io::FromRawFd;
 
 fn possibly_dump_environment() {
-   if let Some(fd_s) = std::env::var_os(&DUMP_ENV_NAME) {
+    if let Some(fd_s) = std::env::var_os(&DUMP_ENV_NAME) {
         let fd = fd_s.to_string_lossy().parse::<i32>().unwrap_or(1);
         let writer = unsafe { std::fs::File::from_raw_fd(fd) };
         let mut env = vec![];
