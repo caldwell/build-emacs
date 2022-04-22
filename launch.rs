@@ -150,7 +150,10 @@ fn possibly_dump_environment() {
                 env.push([k,v]);
             }
         }
-        serde_json::to_writer(writer, &env);
+        if let Err(e) = serde_json::to_writer(writer, &env) {
+            eprintln!("couldn't serialize: {}\n", e);
+            std::process::exit(1);
+        }
 
         std::process::exit(0);
     }
