@@ -134,14 +134,15 @@ fn capture(command: &str) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(Command::new("sh").arg("-c").arg(command).output()?.stdout)?)
 }
 
-const dump_env_name: &str = "EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV";
+const DUMP_ENV_NAME: &str = "EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV";
 use serde_json;
+use std::os::unix::io::FromRawFd;
 
 fn possibly_dump_environment() {
-   if let Some(_) = std::env::var_os(&dump_env_name) {
+   if let Some(_) = std::env::var_os(&DUMP_ENV_NAME) {
         let mut env = vec![];
         for (k, v) in std::env::vars_os() {
-            if k != dump_env_name {
+            if k != DUMP_ENV_NAME {
                 env.push([k,v]);
             }
         }
@@ -154,7 +155,7 @@ fn possibly_dump_environment() {
 fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
     fn osstr(s: &str) -> OsString { OsString::from(s) }
     let env_raw = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
-                                    .env(dump_env_name, "1")
+                                    .env(DUMP_ENV_NAME, "1")
                                     .stderr(std::process::Stdio::inherit())
                                     .output()?.stdout;
 
