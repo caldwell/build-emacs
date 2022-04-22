@@ -33,6 +33,8 @@
 //   You should have received a copy of the GNU General Public License
 //   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#![feature(exit_status_error)]
+
 use std::error::Error;
 use std::vec::Vec;
 use std::collections::hash_map::HashMap;
@@ -139,25 +141,47 @@ use serde_json;
 use std::os::unix::io::FromRawFd;
 
 fn possibly_dump_environment() {
-   if let Some(_) = std::env::var_os(&DUMP_ENV_NAME) {
+   if let Some(fd_s) = std::env::var_os(&DUMP_ENV_NAME) {
+        let fd = fd_s.to_string_lossy().parse::<i32>().unwrap_or(1);
+        let writer = unsafe { std::fs::File::from_raw_fd(fd) };
         let mut env = vec![];
         for (k, v) in std::env::vars_os() {
             if k != DUMP_ENV_NAME {
                 env.push([k,v]);
             }
         }
-        println!("{}", serde_json::to_string(&env).unwrap());
+        serde_json::to_writer(writer, &env);
 
         std::process::exit(0);
     }
 }
 
+fn pipe() -> Result<(std::fs::File, std::fs::File), std::io::Error> {
+    let mut fds: [libc::c_int; 2] = [0,0];
+    let res = unsafe { libc::pipe(fds.as_mut_ptr()) };
+    if res != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    unsafe { Ok((std::fs::File::from_raw_fd(fds[0]),
+                 std::fs::File::from_raw_fd(fds[1]))) }
+}
+
 fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
+    use std::os::unix::io::AsRawFd;
+    use std::io::Read;
+ 
     fn osstr(s: &str) -> OsString { OsString::from(s) }
-    let env_raw = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
-                                    .env(DUMP_ENV_NAME, "1")
-                                    .stderr(std::process::Stdio::inherit())
-                                    .output()?.stdout;
+    let (mut reader, writer) = pipe()?;
+    let mut child = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
+                                    .env(DUMP_ENV_NAME, format!("{}", writer.as_raw_fd()))
+                                    .stdin(std::process::Stdio::null())
+                                    .spawn()?;
+    drop(writer); // force parent to close writer
+    let mut env_raw = Vec::new();
+    let r2end = reader.read_to_end(&mut env_raw);
+    let status = child.wait()?; // Make sure we call wait
+    status.exit_ok()?;
+    let _count = r2end?;
 
     // This dedupes environment variables as a side effect (see comment in dedup_environment())
     let mut env: HashMap<OsString,OsString> = HashMap::new();

@@ -101,6 +101,7 @@ version = "0.1.0"
 dependencies = [
  "cocoa",
  "glob",
+ "libc",
  "objc",
  "regex",
  "serde_json",
