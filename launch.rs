@@ -98,7 +98,7 @@ fn launch() -> Result<(), Box<dyn Error>> {
 
     if let Some(emacs) = emacs {
         let mut env = if unsafe { getppid() } == 1 { // Our parent process id is 1 when we get launched from Finder (or the Dock, or some other OS way).
-            get_shell_environment()?
+            get_shell_environment().or_else::<(),_>(|e| { eprintln!("get_shell_environment failed: {}", e); Ok(dedup_environment()) }).unwrap()
         } else {
             dedup_environment() // Probably launched from Terminal, inherit env vars in this case.
         };
