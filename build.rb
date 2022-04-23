@@ -20,14 +20,14 @@ require 'digest'
 require_relative 'verbose-shell'
 
 class Build
-    attr_accessor :source, :archive_name, :name, :version, :ext, :compress, :extra_configure_args, :extra_make_args, :builddep, :patches
+    attr_accessor :source, :archive_name, :name, :version, :extra_configure_args, :extra_make_args, :builddep, :patches
 
     def initialize(options)
       @source = URI(options[:source])
       @archive_name = File.basename(options[:source])
       m = @archive_name.match(/^([\w-]+)-([\d.-]+)(\.tar.(\w+))$/)
       raise "couldn't parse #{@archive_name}" unless m
-      @name, @version, @ext, @compress = [m[1], m[2], m[3], m[4]]
+      @name, @version = [m[1], m[2]]
       @extra_configure_args = options[:extra_configure_args] || []
       @extra_make_args = options[:extra_make_args] || []
       @builddep = options[:builddep]
