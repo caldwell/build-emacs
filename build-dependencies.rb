@@ -51,7 +51,7 @@ class BuildDependencies
   end
 
   def add_to(key, val)
-    ENV[key] = "#{val}:#{ENV[key]}"
+    ENV[key] = (ENV[key]||'') == '' ? val : "#{val}:#{ENV[key]}"
   end
 
   def ensure
