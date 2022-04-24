@@ -107,8 +107,19 @@ def code_sign(app, signer)
         IO.write(path, IO.read(path).sub!(%r'^#! /','#!/'))
       end
     end
-    Vsh.system *%W"codesign -f --deep --sign #{signer} #{app}"
+    Vsh.system(*%W"codesign -f --deep --sign #{signer} --options=runtime --entitlements #{script_base('emacs-entitlements.plist')} #{app}")
   end
+end
+
+def notarize(dmg, keychain_profile, keychain)
+  keychain_opts = ['--keychain-profile', keychain_profile] + (keychain ? ['--keychain', keychain] : [])
+  submission = JSON.parse(out=Vsh.capture(*%W"xcrun notarytool submit --output-format json", *keychain_opts, dmg).to_s)
+  puts "submission: #{out}" if Vsh.verbose
+  Vsh.system(*%W"xcrun notarytool wait --progress", *keychain_opts, submission['id'])
+  Vsh.system(*%W"xcrun stapler staple", *(Vsh.verbose ? ['-v'] : []), dmg)
+rescue => e
+  Vsh.system(*%W"xcrun notarytool log", *keychain_opts, submission['id'])
+  raise "Notarization failed: #{e}"
 end
 
 def osascript(script)
@@ -141,13 +152,21 @@ end
 
 
 code_signer = nil
+keychain_profile = nil
+keychain_path = nil
 bin_arch = nil
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} [options] <EMACS_TARBALL>..."
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-s", "--sign IDENTITY", "Code sign the resulting app using IDENTITY") { |c| code_signer = c }
+  opts.on("-p", "--keychain-profile NAME", "Keychain profile name for Notarization [1]") {|kp| keychain_profile = kp }
+  opts.on(      "--keychain PATH", "Path to keychain with profile for Notarization") {|k| keychain_path = k }
   opts.on("-a", "--bin-arch ARCH", "Make link from plain bin & libexec to ARCH") { |a| bin_arch = a }
-  opts.on_tail("-h", "--help") { puts opts; exit }
+  opts.on_tail("-h", "--help") { puts opts; puts <<-HELP; exit }
+
+    [1] See `xcrun notarytool store-credentials --help` for more info on how
+        to create a keychain profile.
+  HELP
 end).parse!
 
 emacsen = ARGV.dup
@@ -160,3 +179,5 @@ base = combine(emacsen, out_app, bin_arch)
 code_sign(out_app, code_signer) if code_signer
 
 make_dmg("#{base}-universal.dmg", out_app)
+
+notarize("#{base}-universal.dmg", keychain_profile, keychain_path) if keychain_profile
