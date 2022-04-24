@@ -91,6 +91,7 @@ class Build
     end
 
     def configure(prefix)
+      return unless File.exist? "#{build_dir}/configure"
       configure_command = [*%W"./configure --prefix=#{File.absolute_path(prefix)}", *extra_configure_args]
       conf_hash = Digest::SHA2.hexdigest(File.read(archive_path)+configure_command.join(' '))
       return if File.exist? "#{build_dir}.configured" and File.read("#{build_dir}.configured") == conf_hash
