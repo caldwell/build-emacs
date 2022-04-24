@@ -20,7 +20,7 @@ require 'digest'
 require_relative 'verbose-shell'
 
 class Build
-    attr_accessor :source, :archive_name, :name, :version, :extra_configure_args, :extra_make_args, :builddep, :patches
+    attr_accessor :source, :archive_name, :name, :version, :extra_configure_args, :extra_make_args, :extra_make_install_args, :builddep, :patches
 
     def initialize(options)
       @source = URI(options[:source])
@@ -34,6 +34,7 @@ class Build
       end
       @extra_configure_args = options[:extra_configure_args] || []
       @extra_make_args = options[:extra_make_args] || []
+      @extra_make_install_args = options[:extra_make_install_args] || []
       @builddep = options[:builddep]
       @patches = options[:patches] || []
     end
@@ -94,7 +95,7 @@ class Build
     end
 
     def install
-      Vsh.system(*%W"make -C #{build_dir} install")
+      Vsh.system(*%W"make -C #{build_dir} install", *extra_make_install_args)
     end
 
     def download_url_to_file(dest, url)
