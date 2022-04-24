@@ -108,6 +108,8 @@ class Build
 
     def make
       Vsh.system(*%W"make -C #{build_dir} -j 4", *extra_make_args)
+    rescue
+      raise "Make failed in #{build_dir}"
     end
 
     def install
