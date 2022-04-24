@@ -61,6 +61,7 @@ class Build
         verbose_step("Patching") if patches.count > 0
         patches.each {|patch| Vsh.system(*%W"patch -p0 -d #{build_dir}.unpatched -i #{File.expand_path(patch, File.dirname(__FILE__))}") }
         Vsh.mv "#{build_dir}.unpatched", build_dir
+        Vsh.rm_f("#{build_dir}.configured")
       end
     end
 
@@ -97,10 +98,11 @@ class Build
         Vsh.system(*configure_command)
       }
       File.write("#{build_dir}.configured", conf_hash)
+      Vsh.rm_f("#{build_dir}.installed")
     end
 
     def needs_make?
-      Vsh.system_noraise(*%W"make -C #{build_dir} -q", *extra_make_args) != 0
+      !File.exist?("#{build_dir}.installed")
     end
 
     def make
@@ -109,6 +111,7 @@ class Build
 
     def install
       Vsh.system(*%W"make -C #{build_dir} install", *extra_make_install_args)
+      Vsh.touch("#{build_dir}.installed")
     end
 
     def download_url_to_file(dest, url)
