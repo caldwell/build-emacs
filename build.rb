@@ -25,9 +25,13 @@ class Build
     def initialize(options)
       @source = URI(options[:source])
       @archive_name = File.basename(options[:source])
-      m = @archive_name.match(/^([\w-]+)-([\d.-]+)(\.tar.(\w+))$/)
-      raise "couldn't parse #{@archive_name}" unless m
-      @name, @version = [m[1], m[2]]
+      @name = options[:name]
+      @version = options[:version]
+      if !@name || !@version
+        m = @archive_name.match(/^([\w-]+)-(\d[\w.-]+)(\.tar.(\w+))$/)
+        raise "couldn't parse #{@archive_name}" unless m
+        @name, @version = [m[1], m[2]]
+      end
       @extra_configure_args = options[:extra_configure_args] || []
       @extra_make_args = options[:extra_make_args] || []
       @builddep = options[:builddep]
