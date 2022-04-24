@@ -56,22 +56,35 @@ class Build
       Vsh.mkdir_p("build") unless File.exist? "build"
       unless File.exist? build_dir
         Vsh.rm_rf "#{build_dir}.unpatched"
+        verbose_step("Unpacking")
         unpack(archive_path, "#{build_dir}.unpatched")
+        verbose_step("Patching") if patches.count > 0
         patches.each {|patch| Vsh.system(*%W"patch -p0 -d #{build_dir}.unpatched -i #{File.expand_path(patch, File.dirname(__FILE__))}") }
         Vsh.mv "#{build_dir}.unpatched", build_dir
       end
     end
 
     def fetch
+      verbose_step("Fetching") unless File.exist?(archive_path)
       download_url_to_file(archive_path, source) unless File.exist?(archive_path)
     end
 
+    def bright_bold_cyan(msg)
+      "\e[96;1m#{msg}\e[0m"
+    end
+    def verbose_step(step)
+      puts bright_bold_cyan("==> #{step} #{@name}-#{@version}") if Vsh.verbose
+    end
+
     def build(prefix)
-      puts "==> Building #{@name}-#{@version}" if Vsh.verbose
+      verbose_step("Building")
       prep_build_dir()
+      verbose_step("Configuring")
       configure(prefix)
+      verbose_step("Making")
       if needs_make?
         make()
+        verbose_step("Installing")
         install()
       end
     end
