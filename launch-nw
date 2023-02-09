@@ -1,0 +1,5 @@
+#!/bin/sh
+${0%/*}/Emacs -nw "$@"
+
+# Use this file as a symlink target to easily create a "terminal only" emacs:
+#   ln -s /Applications/Emacs.app/Contents/MacOS/emacs-nw /usr/local/bin/emacs
