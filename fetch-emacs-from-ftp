@@ -28,14 +28,6 @@ url=ARGV.shift || opts.abort("Missing <URL>\n\n"+opts.help)
 url=url.sub(%r{([^/])$}, "\\1/")
 
 version = []
-# IO.popen(["lftp", url, "-e", "cls -1; exit"]) do |io|
-#   while io.gets
-#     $_.chomp!
-#     if /emacs-[^\d]*([\d.]+)\.tar\.[gx]z$/
-#       version.push( { :version=>Gem::Version.new($1), :file=>$_, :url => url+$_ } )
-#     end
-#   end
-# end
 IO.popen(["curl", "-s", url]) do |io|
   while io.gets
     $_.chomp!
