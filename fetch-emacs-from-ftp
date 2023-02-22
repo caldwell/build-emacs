@@ -19,12 +19,14 @@ require_relative 'verbose-shell'
 Vsh = VerboseShell
 
 (opts=OptionParser.new do |opts|
-  opts.banner = "Usage:\n\t#{$0} <URL> [options]"
+  opts.banner = "Usage:\n\t#{$0} <URL> [options]\n\n<URL> can be a full url or 'pretest' or 'release'\n\n"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
 url=ARGV.shift || opts.abort("Missing <URL>\n\n"+opts.help)
+
+url={ "release" => FtpVersions::ReleaseUrl, "pretest" => FtpVersions::PretestUrl }[url] || url
 
 latest = FtpVersions.versions(url).last
 
