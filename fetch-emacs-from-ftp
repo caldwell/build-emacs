@@ -38,7 +38,6 @@ IO.popen(["curl", "-s", url]) do |io|
 end
 
 latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
-base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
 
 Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
 
