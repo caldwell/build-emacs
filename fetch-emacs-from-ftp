@@ -14,6 +14,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
+require_relative 'ftp-versions'
 require_relative 'verbose-shell'
 Vsh = VerboseShell
 
@@ -25,19 +26,7 @@ end).parse!
 
 url=ARGV.shift || opts.abort("Missing <URL>\n\n"+opts.help)
 
-url=url.sub(%r{([^/])$}, "\\1/")
-
-version = []
-IO.popen(["curl", "-s", url]) do |io|
-  while io.gets
-    $_.chomp!
-    if $_ =~ /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)/
-      version.push( { :version=>Gem::Version.new($4), :file=>$3, :date=>$2, :size=>$1, :url => url+$3 } )
-    end
-  end
-end
-
-latest = version.sort{|a,b| a[:version] <=> b[:version]}.last
+latest = FtpVersions.versions(url).last
 
 Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
 
