@@ -117,12 +117,6 @@ trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
 src_dir = 'emacs-source'
 dep_dir = File.expand_path("dep")
 
-Vsh.rm_rf src_dir
-Vsh.mkdir_p src_dir
-FileUtils.cd(src_dir) do
-  Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
-end
-
 os_maj_version = `sw_vers -productVersion`.chomp.sub(/^(\d+\.\d+)\.\d+/,'\1')
 os_maj_version = $1 if os_maj_version =~ /^(\d+)\./ && $1.to_i > 10 # After 10.15.x Apple moved to 11.x, 12.x, etc.
 
@@ -143,6 +137,12 @@ options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_versio
 out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
 extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
+
+Vsh.rm_rf src_dir
+Vsh.mkdir_p src_dir
+FileUtils.cd(src_dir) do
+  Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
+end
 
 binary = build_emacs src_dir, dep_dir, out_name, options
 
