@@ -32,7 +32,7 @@ def build_emacs(src_dir, dep_dir, out_name, options={})
   FileUtils.cd(src_dir) do
     min_os_flag = options[:min_os] ? "-mmacosx-version-min=#{options[:min_os]}" : ""
     configure_flags = options[:host] ? ["--host=#{options[:host]}", '--build=i686-apple-darwin'] : []
-    parallel_flags = options[:parallel] ? ["-j", options[:parallel]] : []
+    parallel_flags = !options[:parallel] ? [] : ["-j", *(options[:parallel] == true ? [] : options[:parallel])]
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
     configure_flags += ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
     configure_flags += %W"--with-modules"
@@ -100,7 +100,7 @@ add_configure_flags = []
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-a", "--arch ARCH", [:i386, :x86_64, :arm64], "Compile for ARCH instead of #{arch.to_s}") { |a| arch = a }
-  opts.on("-j", "--parallel PROCS", "Compile in parallel using PROCS processes") { |p| parallel = p }
+  opts.on("-j", "--parallel [PROCS]", "Compile in parallel using PROCS processes") { |p| parallel = p || true }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
   opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
   opts.on("-A", "--add-configure-flags FLAGS", "Additional configure flags") { |c| add_configure_flags.push(c) }
