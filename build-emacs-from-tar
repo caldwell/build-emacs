@@ -62,7 +62,7 @@ end
 def copy_lib(exe, dep_dir, dest, options={})
   options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
   `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
-    (m,orig,dep_path,lib)=line.match(%r,^\s+(#{dep_dir}(/[^ ]+)/(lib[^/ ]+))\s,).to_a
+    (m,orig,dep_path,lib)=line.match(%r,^\s+(#{dep_dir}(/[^ ]+)+/(lib[^/ ]+))\s,).to_a
     if m
       with_writable_mode(exe) {
         if lib == File.basename(exe)
