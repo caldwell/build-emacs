@@ -1,8 +1,12 @@
-{ pkgs ? import <nixpkgs> {} }:
+let
+  pkgs = import <nixpkgs> {};
 
-with pkgs;
+  ncurses-no-nix-store = pkgs.ncurses.overrideAttrs (finalAttrs: previousAttrs: {
+    configureFlags = previousAttrs.configureFlags ++ [ "--with-terminfo-dirs=/usr/share/terminfo" ];
+  });
+in
 
-mkShell {
+pkgs.mkShell {
   buildInputs = [
     pkgs.darwin.apple_sdk.frameworks.Security
     pkgs.darwin.apple_sdk.frameworks.CoreServices
@@ -14,7 +18,7 @@ mkShell {
 
     pkgs.autoconf
     pkgs.pkgconfig
-    pkgs.ncurses
+    ncurses-no-nix-store
     pkgs.zlib
 
     pkgs.gnutls
