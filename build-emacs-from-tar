@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+#!nix-shell -i ruby dependencies.nix
 #  Copyright © 2014-2021 David Caldwell
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -90,6 +91,22 @@ def prepare_extra_deps(dep_dir, out_name)
   "#{extra_source}.tar"
 end
 
+if File.directory?('/nix/store') && !ENV["IN_NIX_SHELL"]
+  # If we have a nix install and we aren't already in a nix-shell, then relaunch inside one
+  #
+  # The docs want us to use `--run` but that requires stringifying our arguments
+  # safely which is gross. So instead we abuse nix-shell's ability to run as an
+  # interpretter to pass in our args in array form by passing our script to it
+  # as if it was called from a #! line. This requires the 2nd line of our file
+  # to be the `#!nix-shell line` described in the docs. Our dependencies are
+  # specified there instead of here, unfortunately, but at least we safely pass
+  # our entire command line through.
+  puts "Relaunching inside a clean Nix environment..."
+  STDOUT.flush # In CI, stdout is a pipe and not line buffered, gotta get our msg out before exec()
+  Vsh.system_trace("exec", "nix-shell", $0, *ARGV)
+  exec('nix-shell', $0, *ARGV)
+end
+
 arch=`uname -m`.chomp.to_sym
 parallel=false
 disable_deps=false
@@ -136,7 +153,11 @@ options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_versio
 
 out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
 
-extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
+if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
+  dep_dir = '/nix/store'
+else
+  extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
+end
 
 Vsh.rm_rf src_dir
 Vsh.mkdir_p src_dir
