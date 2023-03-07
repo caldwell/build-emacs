@@ -45,7 +45,7 @@ def build_emacs(src_dir, dep_dir, out_name, options={})
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
 
-    copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+    report_strays copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -61,7 +61,10 @@ def with_writable_mode(file)
 end
 
 def copy_lib(exe, dep_dir, dest, options={})
+  stray={ lib:[], path:[], exe:exe }
+  strays=[]
   options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
+  stray[:path].concat(`strings #{exe}`.split("\n").select {|l| l.match(%r{/nix/store/}) })
   `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
     (m,orig,dep_path,lib)=line.match(%r,^\s+(#{dep_dir}(/[^ ]+)+/(lib[^/ ]+))\s,).to_a
     if m
@@ -75,10 +78,13 @@ def copy_lib(exe, dep_dir, dest, options={})
       unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
         Vsh.mkdir_p(dest)
         Vsh.cp(File.join(dep_dir, dep_path, lib), dest)
-        copy_lib(File.join(dest, lib), dep_dir, dest, options) # Copy lib's deps, too
+        strays.concat copy_lib(File.join(dest, lib), dep_dir, dest, options) # Copy lib's deps, too
       end
+    elsif !line.match(%r{^(?:\s+(?:/System/|@executable_path/|/usr/lib/libSystem\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib))|^#{Regexp.escape(exe)}:})
+      stray[:lib].push(line)
     end
   end
+  return strays.concat(stray[:lib].any? || stray[:path].any? ? [stray] : [])
 end
 
 def prepare_extra_deps(dep_dir, out_name)
@@ -89,6 +95,22 @@ def prepare_extra_deps(dep_dir, out_name)
   build_dep.export_sources(extra_source)
   Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
   "#{extra_source}.tar"
+end
+
+def report_strays(stray)
+  normal = "\e[0m"
+  orange = "\e[1;38;5;214;40m"
+  red    = "\e[1;38;5;196;40m"
+  white  = "\e[97;40m"
+  msg =  stray.select {|s| s[:path].any? }.map {|s| { severity: :warn, msg: "#{s[:exe]} contains paths to the nix store", info: s[:path] } }
+  msg += stray.select {|s| s[:lib].any?  }.map {|s| { severity: ENV["IN_NIX_SHELL"] ? :error : :warn,
+                                                      msg: "#{s[:exe]} contains non-encapsulated libs", info: s[:lib] } }
+  msg.each do |m|
+    printf("%s#{white} %s:#{normal}\n", {warn: "#{orange}Warning:", error: "#{red}Error:"}[m[:severity]], m[:msg])
+    m[:info].each {|i| puts "  #{i}" }
+  end
+  STDOUT.flush # Otherwise the raise on the next line comes out way before the actual errors (stderr is always unbuffered)
+  raise "💩 Fatal: Non-encapsulated libs" if msg.any? {|m| m[:severity] == :error}
 end
 
 if File.directory?('/nix/store') && !ENV["IN_NIX_SHELL"]
