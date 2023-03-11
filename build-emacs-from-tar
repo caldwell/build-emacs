@@ -45,7 +45,14 @@ def build_emacs(src_dir, dep_dir, out_name, options={})
     Vsh.system(*(%W"make")+parallel_flags)
     Vsh.system(*(%W"make install"))
 
-    report_strays copy_lib('nextstep/Emacs.app/Contents/MacOS/Emacs', dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+    strays = []
+    ['nextstep/Emacs.app/Contents/MacOS/Emacs',
+     *Dir['nextstep/Emacs.app/Contents/MacOS/bin/*',
+          'nextstep/Emacs.app/Contents/MacOS/libexec/*']].select {|file| Vsh.capture(*%W"file #{file}") =~ /Mach-O/}
+      .each {|exe|
+      strays += copy_lib(exe, dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+    }
+    report_strays strays
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
