@@ -61,26 +61,56 @@ def with_writable_mode(file)
 end
 
 def copy_lib(exe, dep_dir, dest, options={})
-  stray={ lib:[], path:[], exe:exe }
-  strays=[]
   options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
-  stray[:path].concat(`strings #{exe}`.split("\n").select {|l| l.match(%r{/nix/store/}) })
-  `otool -L #{exe}`.split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
-    (m,orig,dep_path,lib)=line.match(%r,^\s+(#{dep_dir}(/[^ ]+)+/(lib[^/ ]+))\s,).to_a
+  options[:rpath] ||= [];
+  with_writable_mode(exe) {
+    # remove our local build path from the id to leak as litle as possible (not that it really matters)
+    Vsh.system(*%W"install_name_tool -id #{Pathname.new(exe).relative_path_from(Pathname.new(dest).dirname).to_s} #{exe}")
+  }
+  stray={ lib:[], path:[], exe:exe }
+  stray[:path].concat(Vsh.capture(*%W"strings #{exe}").split("\n").select {|l| l.match(%r{/nix/store/}) })
+  strays=[]
+  Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
+    (m,orig_dep,dep_base, dep_path,lib)=line.match(%r,^\s+((#{dep_dir}|@rpath)(/[^ ]+)+/(lib[^/ ]+))\s,).to_a
+    (m,orig_dep,dep_base, dep_path,framework,lib)=line.match(%r,^\s+((#{dep_dir}|@rpath)(/[^ ]+)*/([^/ ]+\.framework)(/[^ ]+)+)\s,).to_a unless m
     if m
-      with_writable_mode(exe) {
-        if lib == File.basename(exe)
-          Vsh.system(*%W"install_name_tool -id #{dest}/#{lib} #{exe}") # remove our local build path from the id to leak as litle as possible (not that it really matters)
-        else
-          Vsh.system(*%W"install_name_tool -change #{orig} #{options[:rel_path_to_dest]}/#{lib} #{exe}") # Point the libs to the newly embedded lib directory
-        end
-      }
-      unless lib == File.basename(exe) || File.exists?(File.join(dest, lib))
-        Vsh.mkdir_p(dest)
-        Vsh.cp(File.join(dep_dir, dep_path, lib), dest)
-        strays.concat copy_lib(File.join(dest, lib), dep_dir, dest, options) # Copy lib's deps, too
+      # We have 2 boolean conditons (rp=rpath, fr=framework), so there are 4 cases we need to cover:
+      #        Rename:   orig_dep                -> rel_path_to_dest/new_dep_lib                       Copy: orig_path                  -> dest                  Recurse: dest/new_dep_lib
+      # -- --  #{dep_dir}/.../libx.dylib         -> @executable_path/#{dest:rel}/libx.dylib            #{dep_dir}/.../libx.dylib        -> #{dest}/libx.dylib    #{dest}/libx.dylib
+      # -- fr  #{dep_dir}/.../X.framework/.../X  -> @executable_path/#{dest:rel}/X.framework/.../X     #{dep_dir}/.../X.framework       -> #{dest}/X.framework   #{dest}/X.framework/.../X
+      # rp --  @rpath/.../libx.dylib             -> @executable_path/#{dest:rel}/libx.dylib            <resolved-rpath>/.../libx.dylib  -> #{dest}/libx.dylib    #{dest}/libx.dylib
+      # rp fr  @rpath/.../X.framework/.../X      -> @executable_path/#{dest:rel}/X.framework/.../X     <resolved-rpath>/.../X.framework -> #{dest}/X.framework   #{dest}/X.framework/.../X
+      if framework
+        orig_path = File.join(dep_base, dep_path||"", framework)
+        orig_lib = File.join(orig_path, lib)
+        new_dep_lib = File.join(framework, lib)
+      else
+        orig_path = File.join(dep_base, dep_path, lib)
+        orig_lib = orig_path
+        new_dep_lib = lib
       end
-    elsif !line.match(%r{^(?:\s+(?:/System/|@executable_path/|/usr/lib/libSystem\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib))|^#{Regexp.escape(exe)}:})
+
+      if dep_base == "@rpath"
+        # Accumulating our rpaths here isn't technically correct--If some random binary
+        # down the chain has an rpath this makes it pollute our lookups from then
+        # on. Practically it should be ok since we are currently pulling from Nix and
+        # everything _should_ be sharing the same stuff anyway.
+        options[:rpath] += Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
+                             .select {|c| /^\s*cmd LC_RPATH$/ =~ c}.map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
+        rpath = options[:rpath].select {|p| File.exist?(orig_dep.sub(/@rpath/, p)) }.first or raise "Can't resolve rpath #{orig_dep} in #{rpaths}"
+        orig_path = orig_path.sub(/@rpath/, rpath)
+        orig_lib = orig_lib.sub(/@rpath/, rpath)
+      end
+
+      with_writable_mode(exe) {
+        Vsh.system(*%W"install_name_tool -change #{orig_dep} #{options[:rel_path_to_dest]}/#{new_dep_lib} #{exe}") # Point to where we're about to copy the lib
+      }
+      unless File.exist?(File.join(dest, File.basename(orig_path)))
+        Vsh.mkdir_p(dest)
+        Vsh.cp_r(orig_path, dest)
+        strays.concat copy_lib(File.join(dest, new_dep_lib), dep_dir, dest, options) # Copy lib's deps, too
+      end
+    elsif !line.match(%r{^(?:\s+(?:/System/|@executable_path/|/usr/lib/libSystem\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib|#{Regexp.escape(File.basename(dest))}))|^#{Regexp.escape(exe)}:})
       stray[:lib].push(line)
     end
   end
