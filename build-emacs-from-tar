@@ -68,7 +68,7 @@ def with_writable_mode(file)
 end
 
 def copy_lib(exe, dep_dir, dest, options={})
-  options[:rel_path_to_dest] ||= "@executable_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s
+  rel_path_to_dest = "@loader_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
   options[:rpath] ||= [];
   with_writable_mode(exe) {
     # remove our local build path from the id to leak as litle as possible (not that it really matters)
@@ -95,11 +95,11 @@ def copy_lib(exe, dep_dir, dest, options={})
     (m,orig_dep,dep_base, dep_path,framework,lib)=line.match(%r,^\s+((#{dep_dir}|@rpath)(/[^ ]+)*/([^/ ]+\.framework)(/[^ ]+)+)\s,).to_a unless m
     if m
       # We have 2 boolean conditons (rp=rpath, fr=framework), so there are 4 cases we need to cover:
-      #        Rename:   orig_dep                -> rel_path_to_dest/new_dep_lib                       Copy: orig_path                  -> dest                  Recurse: dest/new_dep_lib
-      # -- --  #{dep_dir}/.../libx.dylib         -> @executable_path/#{dest:rel}/libx.dylib            #{dep_dir}/.../libx.dylib        -> #{dest}/libx.dylib    #{dest}/libx.dylib
-      # -- fr  #{dep_dir}/.../X.framework/.../X  -> @executable_path/#{dest:rel}/X.framework/.../X     #{dep_dir}/.../X.framework       -> #{dest}/X.framework   #{dest}/X.framework/.../X
-      # rp --  @rpath/.../libx.dylib             -> @executable_path/#{dest:rel}/libx.dylib            <resolved-rpath>/.../libx.dylib  -> #{dest}/libx.dylib    #{dest}/libx.dylib
-      # rp fr  @rpath/.../X.framework/.../X      -> @executable_path/#{dest:rel}/X.framework/.../X     <resolved-rpath>/.../X.framework -> #{dest}/X.framework   #{dest}/X.framework/.../X
+      #        Rename:   orig_dep                -> rel_path_to_dest/new_dep_lib                   Copy: orig_path                  -> dest                  Recurse: dest/new_dep_lib
+      # -- --  #{dep_dir}/.../libx.dylib         -> @loader_path/#{dest:rel}/libx.dylib            #{dep_dir}/.../libx.dylib        -> #{dest}/libx.dylib    #{dest}/libx.dylib
+      # -- fr  #{dep_dir}/.../X.framework/.../X  -> @loader_path/#{dest:rel}/X.framework/.../X     #{dep_dir}/.../X.framework       -> #{dest}/X.framework   #{dest}/X.framework/.../X
+      # rp --  @rpath/.../libx.dylib             -> @loader_path/#{dest:rel}/libx.dylib            <resolved-rpath>/.../libx.dylib  -> #{dest}/libx.dylib    #{dest}/libx.dylib
+      # rp fr  @rpath/.../X.framework/.../X      -> @loader_path/#{dest:rel}/X.framework/.../X     <resolved-rpath>/.../X.framework -> #{dest}/X.framework   #{dest}/X.framework/.../X
       if framework
         orig_path = File.join(dep_base, dep_path||"", framework)
         orig_lib = File.join(orig_path, lib)
@@ -123,7 +123,7 @@ def copy_lib(exe, dep_dir, dest, options={})
       end
 
       with_writable_mode(exe) {
-        Vsh.system(*%W"install_name_tool -change #{orig_dep} #{options[:rel_path_to_dest]}/#{new_dep_lib} #{exe}") # Point to where we're about to copy the lib
+        Vsh.system(*%W"install_name_tool -change #{orig_dep} #{File.join(rel_path_to_dest, new_dep_lib)} #{exe}") # Point to where we're about to copy the lib
       }
       unless File.exist?(File.join(dest, File.basename(orig_path)))
         Vsh.mkdir_p(dest)
