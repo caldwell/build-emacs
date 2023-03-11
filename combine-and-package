@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-#  Copyright © 2014-2021 David Caldwell
+#  Copyright © 2014-2023 David Caldwell
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
@@ -47,17 +47,17 @@ def combine(tars, out_app, bin_arch)
     FileUtils.cd(emacs[:dir]) {
       Vsh.system(*(%W"tar xf #{emacs[:tar]}"))
     }
-    if !File.exists? out_app
-      Vsh.cp_r(emacs[:app], out_app, :preserve => true)
-      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/bin'))
-      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/lib'))
-      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/libexec'))
-    end
     # The 'codesign' app (from XCode 6.0) dies when it sees something like 'bin-i386-10.5' in the MacOS
     # directory. I believe it thinks the directory is a framework or some other kind of bundle and it dies
     # when the contents don't match up with what it expects. I've filed a bug with Apple (18340424) but in the
     # meantime, if we remove the dots from the name then codesign doesn't get confused.
     arch_version = emacs[:arch] + '-' + emacs[:mac_os].to_s.gsub('.','_')
+    if !File.exists? out_app
+      Vsh.cp_r(emacs[:app], out_app, :preserve => true)
+      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/bin'))
+      Vsh.rm_rf(File.join(out_app,     "Contents/MacOS/lib-#{arch_version}"))
+      Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/libexec'))
+    end
     Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs'),
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}"))
     Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs.pdmp'), # As of 5dd2d50f3d5e65b85c87da86e2e8a6d087fe5767 this is now in libexec
