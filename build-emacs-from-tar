@@ -37,6 +37,10 @@ def build_emacs(src_dir, dep_dir, out_name, options={})
     # This should be the default but isn't :-( http://debbugs.gnu.org/cgi/bugreport.cgi?bug=19850
     configure_flags += ['--enable-locallisppath=/Library/Application Support/Emacs/${version}/site-lisp:/Library/Application Support/Emacs/site-lisp']
     configure_flags += %W"--with-modules"
+    # macOS has a low file descriptor limit for some reason and that breaks LSP stuff somehow.
+    # https://en.liujiacai.net/2022/09/03/emacs-maxopenfiles/
+    # https://github.com/caldwell/build-emacs/issues/127
+    configure_flags += ['CFLAGS=-DFD_SETSIZE=10000 -DDARWIN_UNLIMITED_SELECT']
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
