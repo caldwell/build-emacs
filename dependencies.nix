@@ -20,5 +20,6 @@ pkgs.mkShell {
     pkgs.libxml2
     pkgs.librsvg
     pkgs.tree-sitter
+    pkgs.sqlite
   ];
 }
