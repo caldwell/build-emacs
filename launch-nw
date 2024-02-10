@@ -1,7 +1,9 @@
 #!/bin/sh
+#
+# Use this file as a symlink target to easily create a "terminal only" emacs:
+#   ln -s /Applications/Emacs.app/Contents/MacOS/emacs-nw /usr/local/bin/emacs
+#
+
 orig=`readlink $0`
 : ${orig:=$0} # Otherwise you can't run it directly
 ${orig%/*}/Emacs -nw "$@"
-
-# Use this file as a symlink target to easily create a "terminal only" emacs:
-#   ln -s /Applications/Emacs.app/Contents/MacOS/emacs-nw /usr/local/bin/emacs
