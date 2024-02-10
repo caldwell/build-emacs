@@ -4,6 +4,6 @@
 #   ln -s /Applications/Emacs.app/Contents/MacOS/emacs-nw /usr/local/bin/emacs
 #
 
-orig=`readlink $0`
-: ${orig:=$0} # Otherwise you can't run it directly
-${orig%/*}/Emacs -nw "$@"
+orig=$(readlink "$0")
+: "${orig:=$0}" # Otherwise you can't run it directly
+"${orig%/*}"/Emacs -nw "$@"
