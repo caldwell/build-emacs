@@ -25,7 +25,7 @@ end
 require script_base('verbose-shell.rb')
 Vsh = VerboseShell
 
-def combine(tars, out_app, bin_arch)
+def combine(tars, out_app)
   base = nil
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
@@ -36,7 +36,12 @@ def combine(tars, out_app, bin_arch)
     base ||= $1
     abort "bases don't match: #{tarball} vs #{base}" unless base == $1
     { :tar => tarball, :version => $2, :git_rev => $3, :mac_os => Gem::Version.new($4), :arch => $5,
-      :dir => dir, :app => File.join(dir,'Emacs.app') }
+      :dir => dir, :app => File.join(dir,'Emacs.app'),
+      # The 'codesign' app (from XCode 6.0) dies when it sees something like 'bin-i386-10.5' in the MacOS
+      # directory. I believe it thinks the directory is a framework or some other kind of bundle and it dies
+      # when the contents don't match up with what it expects. I've filed a bug with Apple (18340424) but in the
+      # meantime, if we remove the dots from the name then codesign doesn't get confused.
+      :arch_version => $5 + '-' + $4.gsub('.','_') }
   }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
 
 
@@ -47,11 +52,7 @@ def combine(tars, out_app, bin_arch)
     FileUtils.cd(emacs[:dir]) {
       Vsh.system(*(%W"tar xf #{emacs[:tar]}"))
     }
-    # The 'codesign' app (from XCode 6.0) dies when it sees something like 'bin-i386-10.5' in the MacOS
-    # directory. I believe it thinks the directory is a framework or some other kind of bundle and it dies
-    # when the contents don't match up with what it expects. I've filed a bug with Apple (18340424) but in the
-    # meantime, if we remove the dots from the name then codesign doesn't get confused.
-    arch_version = emacs[:arch] + '-' + emacs[:mac_os].to_s.gsub('.','_')
+    arch_version = emacs[:arch_version]
     if !File.exists? out_app
       Vsh.cp_r(emacs[:app], out_app, :preserve => true)
       Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/bin'))
@@ -70,13 +71,26 @@ def combine(tars, out_app, bin_arch)
              File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}"))
     Vsh.mv(  File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"), # FIXME: See if we can configure a custom libexec w/arch_version `C-h v exec-directory`
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp")) if File.exists?(File.join(out_app, "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"))
-    if bin_arch && bin_arch.gsub('.','_') == arch_version
-      Vsh.ln_s("bin-#{arch_version}",
-               File.join(out_app,     'Contents/MacOS/bin'))
-      Vsh.ln_s("lib-#{arch_version}",
-               File.join(out_app,     'Contents/MacOS/lib'))  if File.exists?("lib-#{arch_version}")
-      Vsh.ln_s("libexec-#{arch_version}",
-               File.join(out_app,     'Contents/MacOS/libexec'))
+  end
+
+  # Grab the lowest os version for each arch--We'll lipo those together for the non-versioned bin and libexec dirs.
+  # Lowest to maximize compatibility of the exes (it's unlikely they will use super new and desirable macOS APIs)
+  lipo_arches = emacsen.map {|emacs| emacs[:arch]}.uniq.map {|arch|
+    emacsen.filter {|emacs| emacs[:arch] == arch}
+      .sort {|a,b| a[:mac_os] <=> b[:mac_os]}
+      .first[:arch_version]
+  }
+  Vsh.cd(File.join(out_app, "Contents/MacOS")) do
+    %W(bin libexec).each do |dir|
+      Vsh.mkdir_p(dir)
+      Dir["#{dir}-#{lipo_arches.first}/*"].map {|path| File.basename(path)}.each do |exe|
+        lipo_exes = lipo_arches.map {|arch_version| "#{dir}-#{arch_version}/#{exe}"}
+        if Vsh.capture(*%W"file -b #{lipo_exes.first}") =~ /script/
+          Vsh.ln_s("../#{lipo_exes.first}", "#{dir}/#{exe}")
+        else
+          Vsh.system("lipo", *(lipo_exes), *%W"-create -output #{dir}/#{exe}")
+        end
+      end
     end
   end
 
@@ -155,14 +169,12 @@ end
 code_signer = nil
 keychain_profile = nil
 keychain_path = nil
-bin_arch = nil
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} [options] <EMACS_TARBALL>..."
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on("-s", "--sign IDENTITY", "Code sign the resulting app using IDENTITY") { |c| code_signer = c }
   opts.on("-p", "--keychain-profile NAME", "Keychain profile name for Notarization [1]") {|kp| keychain_profile = kp }
   opts.on(      "--keychain PATH", "Path to keychain with profile for Notarization") {|k| keychain_path = k }
-  opts.on("-a", "--bin-arch ARCH", "Make link from plain bin & libexec to ARCH") { |a| bin_arch = a }
   opts.on_tail("-h", "--help") { puts opts; puts <<-HELP; exit }
 
     [1] See `xcrun notarytool store-credentials --help` for more info on how
@@ -175,7 +187,7 @@ opts.abort("Need at least one tarball\n\n"+opts.help) if emacsen.length < 1
 
 out_app = 'combined/Emacs.app'
 Vsh.mkdir_p 'combined'
-base = combine(emacsen, out_app, bin_arch)
+base = combine(emacsen, out_app)
 
 code_sign(out_app, code_signer) if code_signer
 
