@@ -33,8 +33,6 @@
 //   You should have received a copy of the GNU General Public License
 //   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![feature(exit_status_error)]
-
 use std::error::Error;
 use std::vec::Vec;
 use std::collections::hash_map::HashMap;
@@ -175,7 +173,8 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
  
     fn osstr(s: &str) -> OsString { OsString::from(s) }
     let (mut reader, writer) = pipe()?;
-    let mut child = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh"))).args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
+    let mut command = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh")));
+    let mut child = command.args([osstr("--login"), osstr("-c"), std::env::current_exe()?.into_os_string()])
                                     .env(DUMP_ENV_NAME, format!("{}", writer.as_raw_fd()))
                                     .stdin(std::process::Stdio::null())
                                     .spawn()?;
@@ -183,7 +182,7 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
     let mut env_raw = Vec::new();
     let r2end = reader.read_to_end(&mut env_raw);
     let status = child.wait()?; // Make sure we call wait
-    status.exit_ok()?;
+    if !status.success() { Err(format!("Command: {command:?}\nFailed: {status}"))? }
     let _count = r2end?;
 
     // This dedupes environment variables as a side effect (see comment in dedup_environment())
