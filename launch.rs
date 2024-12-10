@@ -170,7 +170,7 @@ fn pipe() -> Result<(std::fs::File, std::fs::File), std::io::Error> {
 fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>> {
     use std::os::unix::io::AsRawFd;
     use std::io::Read;
- 
+
     fn osstr(s: &str) -> OsString { OsString::from(s) }
     let (mut reader, writer) = pipe()?;
     let mut command = Command::new(std::env::var_os("SHELL").unwrap_or(osstr("sh")));
