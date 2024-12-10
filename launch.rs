@@ -140,6 +140,8 @@ const DUMP_ENV_NAME: &str = "EMACS_LAUNCHER_PLEASE_DUMP_YOUR_ENV";
 use serde_json;
 use std::os::unix::io::FromRawFd;
 
+use maybe_utf8::MaybeUTF8;
+
 fn possibly_dump_environment() {
     if let Some(fd_s) = std::env::var_os(&DUMP_ENV_NAME) {
         let fd = fd_s.to_string_lossy().parse::<i32>().unwrap_or(1);
@@ -147,7 +149,7 @@ fn possibly_dump_environment() {
         let mut env = vec![];
         for (k, v) in std::env::vars_os() {
             if k != DUMP_ENV_NAME {
-                env.push([k,v]);
+                env.push([MaybeUTF8::new(k),MaybeUTF8::new(v)]);
             }
         }
         if let Err(e) = serde_json::to_writer(writer, &env) {
@@ -189,8 +191,8 @@ fn get_shell_environment() -> Result<HashMap<OsString,OsString>, Box<dyn Error>>
 
     // This dedupes environment variables as a side effect (see comment in dedup_environment())
     let mut env: HashMap<OsString,OsString> = HashMap::new();
-    for e in serde_json::from_slice::<Vec<[OsString;2]>>(&env_raw)? {
-        env.insert(e[0].clone(), e[1].clone());
+    for e in serde_json::from_slice::<Vec<[MaybeUTF8;2]>>(&env_raw)? {
+        env.insert(e[0].clone().into(), e[1].clone().into());
     }
 
     Ok(env)
@@ -262,6 +264,35 @@ mod dialog { // Cocoa native dialog for fatal errors
         }
         unsafe fn runModal(self) -> NSInteger {
             msg_send![self, runModal]
+        }
+    }
+}
+
+mod maybe_utf8 { // Is all this worth a more readable serialization between the parent and child??
+    use std::ffi::{OsString};
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone)]
+    #[serde(untagged)]
+    pub enum MaybeUTF8 {
+        UTF8(String),
+        Raw(OsString),
+    }
+
+    impl MaybeUTF8 {
+        pub fn new(s: OsString) -> MaybeUTF8 {
+            match s.to_str() {
+                Some(s) => MaybeUTF8::UTF8(String::from(s)),
+                None    => MaybeUTF8::Raw(s),
+            }
+        }
+    }
+
+    impl From<MaybeUTF8> for OsString {
+        fn from(s: MaybeUTF8) -> Self {
+            match s {
+                MaybeUTF8::Raw(s)  => s,
+                MaybeUTF8::UTF8(s) => OsString::from(s),
+            }
         }
     }
 }
