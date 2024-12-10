@@ -45,6 +45,8 @@ use version_compare::{Cmp, Version};
 use glob::glob;
 use regex::Regex;
 
+use dialog::show_dialog;
+
 fn main() {
     possibly_dump_environment();
     if let Err(e) = launch() {
@@ -207,58 +209,59 @@ fn dedup_environment() -> HashMap<OsString,OsString> {
     env
 }
 
-extern crate cocoa;
-#[macro_use] extern crate objc;
-
-use cocoa::base::{id, nil};
-use cocoa::foundation::{NSAutoreleasePool, NSString, NSInteger};
-use cocoa::appkit::*;
-
-fn show_dialog(message: &str, info: &str) {
-    unsafe {
-        let _pool = NSAutoreleasePool::new(nil);
-        let app = NSApp();
-        app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
-        let alert = NSAlert::alloc(nil).init().autorelease();
-        alert.setMessageText_(ns_string(message));
-        alert.setInformativeText_(ns_string(info));
-        alert.addButtonWithTitle_(ns_string("Quit"));
-        alert.runModal();
-    }
-}
-
-fn ns_string(s: &str) -> id {
-    unsafe { NSString::alloc(nil).init_str(s) }
-}
-
-// This should probably be part of the cocoa crate:
-#[allow(non_snake_case)]
-trait NSAlert: Sized {
-    unsafe fn alloc(_: Self) -> id {
-        msg_send![class!(NSAlert), alloc]
-    }
-    unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id;
-    unsafe fn setMessageText_(self, text: id/*NSString*/) -> id;
-    unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id;
-    unsafe fn runModal(self) -> NSInteger;
-}
-
-impl NSAlert for id {
-    unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id {
-        msg_send![self, setInformativeText: text]
-    }
-    unsafe fn setMessageText_(self, text: id/*NSString*/) -> id {
-        msg_send![self, setMessageText: text]
-    }
-    unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id /* (NSButton *) */ {
-        msg_send![self, addButtonWithTitle: title]
-    }
-    unsafe fn runModal(self) -> NSInteger {
-        msg_send![self, runModal]
-    }
-}
 
 // This is in the libc crate, but it seems silly to pull in a whole crate for one line:
 extern "C" {
     pub fn getppid() -> i32;
+}
+
+mod dialog { // Cocoa native dialog for fatal errors
+    use cocoa::base::{id, nil};
+    use cocoa::foundation::{NSAutoreleasePool, NSString, NSInteger};
+    use cocoa::appkit::*;
+    use objc::*;
+
+    pub fn show_dialog(message: &str, info: &str) {
+        unsafe {
+            let _pool = NSAutoreleasePool::new(nil);
+            let app = NSApp();
+            app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+            let alert = NSAlert::alloc(nil).init().autorelease();
+            alert.setMessageText_(ns_string(message));
+            alert.setInformativeText_(ns_string(info));
+            alert.addButtonWithTitle_(ns_string("Quit"));
+            alert.runModal();
+        }
+    }
+
+    fn ns_string(s: &str) -> id {
+        unsafe { NSString::alloc(nil).init_str(s) }
+    }
+
+    // This should probably be part of the cocoa crate:
+    #[allow(non_snake_case)]
+    trait NSAlert: Sized {
+        unsafe fn alloc(_: Self) -> id {
+            msg_send![class!(NSAlert), alloc]
+        }
+        unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id;
+        unsafe fn setMessageText_(self, text: id/*NSString*/) -> id;
+        unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id;
+        unsafe fn runModal(self) -> NSInteger;
+    }
+
+    impl NSAlert for id {
+        unsafe fn setInformativeText_(self, text: id/*NSString*/) -> id {
+            msg_send![self, setInformativeText: text]
+        }
+        unsafe fn setMessageText_(self, text: id/*NSString*/) -> id {
+            msg_send![self, setMessageText: text]
+        }
+        unsafe fn addButtonWithTitle_(self, title: id/*NSString*/) -> id /* (NSButton *) */ {
+            msg_send![self, addButtonWithTitle: title]
+        }
+        unsafe fn runModal(self) -> NSInteger {
+            msg_send![self, runModal]
+        }
+    }
 }
