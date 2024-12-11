@@ -50,6 +50,23 @@ To fix it, run this:
 
     sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 
+### Rust
+
+The launcher is now written in [Rust instead of Ruby](https://emacsformacosx.com/about#rust-launcher).
+To build it you need [Rust installed](https://www.rust-lang.org/tools/install).
+
+The Rust `cargo` invocations are wrapped in a `Makefile` that compiles both
+`x86_64` and `aarch64` and then uses Apple's `lipo` to combine them into a
+fat binary. This requires that you have Rust compiler targets installed for
+both `x86_64` and `aarch64` (Apple Silicon). This can be accomplished with
+(on an `aarch64` (Apple Silicon) machine):
+
+    rustup target add x86_64-apple-darwin
+
+Or on an x86_64 (Intel) mac:
+
+    rustup target add aarch64-apple-darwin
+
 Usage
 -----
 
@@ -85,6 +102,12 @@ the latest code and then tars it up like so:
     (cd $DIR && ./autogen.sh)
     tar cjf $DIR.tar.bz2 $DIR
 
+
+### The Rust launcher
+
+To compile the Rust launcher (needed by `combine-and-package`):
+
+    make
 
 ### combine-and-package
 
