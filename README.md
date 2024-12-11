@@ -67,6 +67,12 @@ Or on an x86_64 (Intel) mac:
 
     rustup target add aarch64-apple-darwin
 
+### Ruby
+
+The system Ruby from macOS 10.12 (ruby 2.3.7p456) should be able to run the
+scripts. If you are trying to build on an older macOS, you may need to get a
+more recent Ruby installed.
+
 Usage
 -----
 
