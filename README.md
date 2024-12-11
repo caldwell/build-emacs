@@ -108,6 +108,28 @@ the latest code and then tars it up like so:
     (cd $DIR && ./autogen.sh)
     tar cjf $DIR.tar.bz2 $DIR
 
+#### Emacs Dependencies
+
+By default `build-emacs-from-tar` will attempt to gather several extra
+dependencies to make Emacs more full featured. You can disable this with the
+`--no-deps` option. There are 2 ways the dependencies can be built:
+
+1. By downloading prebuilt packages using [Nix](https://nixos.org/). If you
+   have [installed Nix on your Mac](https://nixos.org/download/#nix-install-macos),
+   then `build-emacs-from-tar` should autodetect this and use `nix-shell`
+   (which must be in your `PATH`) to install a list of dependencies. The
+   dependency list can be found in `dependencies.nix`.
+
+2. By downloading and compiling a list programs. This happens if Nix is not
+   installed. The list is canned and can be found in
+   `build-dependencies.rb`. This method is not used any more by the builds
+   on emacsformacosx.com as it is prone to getting out of date and requires
+   a lot of up-keep. The code to do this (`build.rb`) will be removed at
+   some point.
+
+No matter which method is used, `build-emacs-from-tar` modifies the
+dependencies' libraries as it copies them into `Emacs.app` so that the app
+bundle remains portable.
 
 ### The Rust launcher
 
