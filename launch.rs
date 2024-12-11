@@ -97,7 +97,7 @@ fn launch() -> Result<(), Box<dyn Error>> {
     let emacs = compat.iter().nth(0);
 
     if let Some(emacs) = emacs {
-        let mut env = if unsafe { getppid() } == 1 { // Our parent process id is 1 when we get launched from Finder (or the Dock, or some other OS way).
+        let mut env = if unsafe { libc::getppid() } == 1 { // Our parent process id is 1 when we get launched from Finder (or the Dock, or some other OS way).
             get_shell_environment().or_else::<(),_>(|e| { eprintln!("get_shell_environment failed: {}", e); Ok(dedup_environment()) }).unwrap()
         } else {
             dedup_environment() // Probably launched from Terminal, inherit env vars in this case.
@@ -209,12 +209,6 @@ fn dedup_environment() -> HashMap<OsString,OsString> {
         env.insert(k,v);
     }
     env
-}
-
-
-// This is in the libc crate, but it seems silly to pull in a whole crate for one line:
-extern "C" {
-    pub fn getppid() -> i32;
 }
 
 mod dialog { // Cocoa native dialog for fatal errors
