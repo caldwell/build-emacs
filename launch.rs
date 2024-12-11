@@ -1,4 +1,4 @@
-// Copyright © 2012-2022 David Caldwell <david@porkrind.org>
+// Copyright © 2012-2024 David Caldwell <david@porkrind.org>
 //
 // This launcher code is from emacsformacosx.com and is not part of Emacs
 // proper. It exists so that there can be a single download that contains

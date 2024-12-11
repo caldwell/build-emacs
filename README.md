@@ -163,7 +163,7 @@ Example
 License
 -------
 
-Copyright © 2004-2021 David Caldwell <david@porkrind.org>
+Copyright © 2004-2024 David Caldwell <david@porkrind.org>
 
 The scripts and programs contained in this distribution are licensed under
 the GNU General Public License (v3.0). See the LICENSE file for details.
