@@ -25,7 +25,7 @@ class BuildDependencies
     arm = `uname -m`.chomp == 'arm64'
     kernel_version = `uname -r`.chomp
     @prefix = File.expand_path(prefix)
-    @deps = [ # Ordered carefullt so dependencies work.
+    @deps = [ # Ordered carefully so dependencies work.
       { source: "https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz", builddep: true,
         extra_configure_args: [*%W"--with-internal-glib --disable-debug --disable-host-tool", "LIBS=-framework corefoundation -framework cocoa"] },
 
