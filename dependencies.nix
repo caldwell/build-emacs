@@ -11,7 +11,7 @@ pkgs.mkShell {
     pkgs.darwin.apple_sdk.frameworks.AppKit
 
     pkgs.autoconf
-    pkgs.pkgconfig or pkgs.pkg-config
+    pkgs.pkg-config or pkgs.pkgconfig
     ncurses-no-nix-store
     pkgs.zlib
 
