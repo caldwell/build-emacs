@@ -80,7 +80,6 @@ def copy_lib(exe, dep_dir, dest, options={})
     Vsh.system(*%W"install_name_tool -id #{Pathname.new(exe).relative_path_from(Pathname.new(dest).dirname).to_s} #{exe}")
   }
   stray={ lib:[], path:[], exe:exe }
-  stray[:path].concat(Vsh.capture(*%W"strings #{exe}").split("\n").select {|l| l.match(%r{/nix/store/}) })
   strays=[]
   Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
     # HACK! I know we just added all that nice code to handle frameworks and rpaths (and
@@ -139,6 +138,7 @@ def copy_lib(exe, dep_dir, dest, options={})
       stray[:lib].push(line)
     end
   end
+  stray[:path].concat(Vsh.capture(*%W"strings #{exe}").split("\n").select {|l| l.match(%r{/nix/store/}) })
   return strays.concat(stray[:lib].any? || stray[:path].any? ? [stray] : [])
 end
 
