@@ -197,6 +197,7 @@ options = { :extra_configure_flags => [] }
   opts.on(      "--extra-rev REV", "Add an extra -REV to the version") { |r| extra_rev = r }
   opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
   opts.on("-A", "--add-configure-flags FLAGS", "Additional configure flags") { |c| options[:extra_configure_flags].push(c) }
+  opts.on("-m", "--minimum-os VERSION", "Minimum OS target") {|v| options[:min_os] = v }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -214,10 +215,10 @@ os_maj_version = `sw_vers -productVersion`.chomp.sub(/^(\d+\.\d+)\.\d+/,'\1')
 os_maj_version = $1 if os_maj_version =~ /^(\d+)\./ && $1.to_i > 10 # After 10.15.x Apple moved to 11.x, 12.x, etc.
 
 options = { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host => 'i686-apple-darwin',    :min_os => '10.5' }.merge(options) if arch == :i386
-options[:min_os] =  '10.7' if os_maj_version == '10.8'
-options[:min_os] =  '10.5' if os_maj_version == '10.6' && arch == :x86_64
-options[:min_os] =  '10.6' if trunk && options[:min_os] == '10.5'
-options[:min_os] =  '11'   if os_maj_version == '12' && arch == :arm64 # Hack around thoughtless upgrade of the build machine to macOS 12 🤦
+options[:min_os] ||=  '10.7' if os_maj_version == '10.8'
+options[:min_os] ||=  '10.5' if os_maj_version == '10.6' && arch == :x86_64
+options[:min_os] ||=  '10.6' if trunk && options[:min_os] == '10.5'
+options[:min_os] ||=  '11'   if os_maj_version == '12' && arch == :arm64 # Hack around thoughtless upgrade of the build machine to macOS 12 🤦
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
