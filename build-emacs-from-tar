@@ -21,11 +21,13 @@ require_relative 'build-dependencies'
 require_relative 'verbose-shell'
 Vsh = VerboseShell
 
-def build_emacs(src_dir, dep_dir, out_name, options={})
+$steps = %W"unpack configure clean make install copylibs"
+def build_emacs(src_dir, dep_dir, out_name, options={ })
   out_name = out_name + ".tar.bz2"
   puts "building emacs: #{src_dir} => #{out_name}"
   options[:cc] ||= "cc"
   options[:extra_cc_options] ||= ''
+  options[:steps] ||= $steps
 
   ENV["PKG_CONFIG_PATH"]="#{dep_dir}/lib/pkgconfig:#{ENV["PKG_CONFIG_PATH"]}"
   ENV["PATH"]="#{dep_dir}/bin:#{ENV["PATH"]}"
@@ -44,20 +46,22 @@ def build_emacs(src_dir, dep_dir, out_name, options={})
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace(["CC=#{ENV['CC']}"])
-    Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))
-    Vsh.system(*(%W"make clean"))
-    Vsh.system_noraise(*(%W"make")+parallel_flags) == 0 ||
-    Vsh.system(        *(%W"make")+parallel_flags) # Try one more time if it fails! Emacs 29.4 always fails on the first `make` with `ranlib: file: libgnu.a(u64.o) has no symbols`
-    Vsh.system(*(%W"make install"))
+    Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))   if options[:steps].include? 'configure'
+    Vsh.system(*(%W"make clean"))                                                                    if options[:steps].include? 'clean'
+    Vsh.system_noraise(*(%W"make")+parallel_flags) == 0 ||  # Try one more time if it fails! Emacs 29.4 always fails on the first `make` with `ranlib: file: libgnu.a(u64.o) has no symbols`
+    Vsh.system(        *(%W"make")+parallel_flags)                                                   if options[:steps].include? 'make'
+    Vsh.system(*(%W"make install"))                                                                  if options[:steps].include? 'install'
 
-    strays = []
-    ['nextstep/Emacs.app/Contents/MacOS/Emacs',
-     *Dir['nextstep/Emacs.app/Contents/MacOS/bin/*',
-          'nextstep/Emacs.app/Contents/MacOS/libexec/*']].select {|file| Vsh.capture(*%W"file #{file}") =~ /Mach-O/}
-      .each {|exe|
-      strays += copy_lib(exe, dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
-    }
-    report_strays strays
+    if options[:steps].include? 'copylibs'
+      strays = []
+      ['nextstep/Emacs.app/Contents/MacOS/Emacs',
+       *Dir['nextstep/Emacs.app/Contents/MacOS/bin/*',
+            'nextstep/Emacs.app/Contents/MacOS/libexec/*']].select {|file| Vsh.capture(*%W"file #{file}") =~ /Mach-O/}
+        .each {|exe|
+        strays += copy_lib(exe, dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}") # Install and adjust libs into the App.
+      }
+      report_strays strays
+    end
 
     FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
   end
@@ -198,6 +202,7 @@ options = { :extra_configure_flags => [] }
   opts.on(      "--no-deps", "Don't attempt to get any extra libraries") { |b| disable_deps = true }
   opts.on("-A", "--add-configure-flags FLAGS", "Additional configure flags") { |c| options[:extra_configure_flags].push(c) }
   opts.on("-m", "--minimum-os VERSION", "Minimum OS target") {|v| options[:min_os] = v }
+  opts.on(      "--test-steps STEPS", "Only run STEPS, a comma-separated-list (default: #{$steps.join(',')})") {|s| options[:steps] = s.split(',') }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -232,10 +237,13 @@ else
   extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
 end
 
-Vsh.rm_rf src_dir
-Vsh.mkdir_p src_dir
-FileUtils.cd(src_dir) do
-  Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
+
+if !options[:steps] or options[:steps].include? 'unpack'
+  Vsh.rm_rf src_dir
+  Vsh.mkdir_p src_dir
+  FileUtils.cd(src_dir) do
+    Vsh.system(*%W'tar xf #{"../"+source_tar} --strip-components=1')
+  end
 end
 
 binary = build_emacs src_dir, dep_dir, out_name, options
