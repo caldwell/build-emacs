@@ -82,6 +82,9 @@ class VerboseShell
     def chown_R_formatter(method, user, group, file, **opts)
       chown_formatter(method, user, group, file)
     end
+    def mkdir_p_formatter(method, file, **opts)
+      method_to_a(method) + (file.is_a?(Array) ? file : [file])
+    end
 
     def method_missing(method, *args, &block)
       opts = args.last.is_a?(Hash) ? args.pop : {}
