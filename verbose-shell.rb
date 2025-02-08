@@ -85,8 +85,8 @@ class VerboseShell
 
     def method_missing(method, *args, &block)
       opts = args.last.is_a?(Hash) ? args.pop : {}
-      system_trace self.respond_to?("#{method}_formatter") ? self.send("#{method}_formatter", method, *args, **opts)
-                   : method_to_a(method) + args + (opts == {} ? [] : [opts.inspect])
+      system_trace *(self.respond_to?("#{method}_formatter") ? self.send("#{method}_formatter", method, *args, **opts)
+                     : method_to_a(method) + args + (opts == {} ? [] : [opts.inspect]))
       FileUtils.send(method, *args, **opts, &block)
     end
   end
