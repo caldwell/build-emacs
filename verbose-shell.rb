@@ -70,16 +70,16 @@ class VerboseShell
       a
     end
 
-    def chmod_formatter(method, mode, file)
+    def chmod_formatter(method, mode, file, **opts)
       method_to_a(method) + [mode.class == String ? mode : sprintf("%04o", mode)] + (file.class == Array ? file : [file])
     end
-    def chmod_R_formatter(method, mode, file)
+    def chmod_R_formatter(method, mode, file, **opts)
       chmod_formatter(method, mode, file)
     end
-    def chown_formatter(method, user, group, file)
+    def chown_formatter(method, user, group, file, **opts)
       method_to_a(method) + [[user,group && ":#{group}"].select{|x|x}.join('')] + (file.class == Array ? file : [file])
     end
-    def chown_R_formatter(method, user, group, file)
+    def chown_R_formatter(method, user, group, file, **opts)
       chown_formatter(method, user, group, file)
     end
 
