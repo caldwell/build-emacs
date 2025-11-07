@@ -45,7 +45,7 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
     configure_flags += ['CFLAGS=-DFD_SETSIZE=10000 -DDARWIN_UNLIMITED_SELECT']
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
-    Vsh.system_trace(["CC=#{ENV['CC']}"])
+    Vsh.system_trace("CC=#{ENV['CC']}")
     Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))   if options[:steps].include? 'configure'
     Vsh.system(*(%W"make clean"))                                                                    if options[:steps].include? 'clean'
     Vsh.system_noraise(*(%W"make")+parallel_flags) == 0 ||  # Try one more time if it fails! Emacs 29.4 always fails on the first `make` with `ranlib: file: libgnu.a(u64.o) has no symbols`
