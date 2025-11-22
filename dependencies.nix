@@ -25,8 +25,6 @@ in
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.darwin.apple_sdk.frameworks.AppKit
-
     pkgs.autoconf
     pkgs.pkg-config or pkgs.pkgconfig
     ncurses-no-nix-store
