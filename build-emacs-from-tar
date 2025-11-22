@@ -79,6 +79,8 @@ end
 def copy_lib(exe, dep_dir, dest, options={})
   rel_path_to_dest = "@loader_path/" + Pathname.new(dest).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
   options[:rpath] ||= [];
+  options[:depth] ||= 0;
+  puts "#{'='*(options[:depth]+1)*2}> Processing #{exe}" if Vsh.verbose
   with_writable_mode(exe) {
     # remove our local build path from the id to leak as litle as possible (not that it really matters)
     Vsh.system(*%W"install_name_tool -id #{Pathname.new(exe).relative_path_from(Pathname.new(dest).dirname).to_s} #{exe}")
@@ -136,7 +138,7 @@ def copy_lib(exe, dep_dir, dest, options={})
       unless File.exist?(File.join(dest, File.basename(orig_path)))
         Vsh.mkdir_p(dest)
         Vsh.cp_r(orig_path, dest)
-        strays.concat copy_lib(File.join(dest, new_dep_lib), dep_dir, dest, options) # Copy lib's deps, too
+        strays.concat copy_lib(File.join(dest, new_dep_lib), dep_dir, dest, options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
       end
     elsif !line.match(%r{^(?:\s+(?:/System/|@executable_path/|/usr/lib/lib(System|objc)\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib|#{Regexp.escape(File.basename(dest))}))|^#{Regexp.escape(exe)}:})
       stray[:lib].push(line)
