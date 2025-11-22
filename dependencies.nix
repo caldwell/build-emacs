@@ -23,7 +23,7 @@ let
   });
 in
 
-pkgs.mkShellNoCC {
+pkgs.mkShell {
   buildInputs = [
     pkgs.autoconf
     pkgs.pkg-config or pkgs.pkgconfig
@@ -36,5 +36,12 @@ pkgs.mkShellNoCC {
     pkgs.librsvg
     pkgs.tree-sitter
     pkgs.sqlite
-  ];
+  ] ++ (
+    # This magic checks for the existence of darwin.apple_sdk.frameworks.AppKit which is only available in the
+    # old nixpkgs we need to use for intel macs. In the newer nixpkgs, this isn't just nonexistent, it actively
+    # throws, hence the weird tryEval stuff.
+    if let e = { x = pkgs?darwin.apple_sdk.frameworks.AppKit; }; in (builtins.tryEval (builtins.deepSeq e e)).value?x
+    then [pkgs.darwin.apple_sdk.frameworks.AppKit]
+    else []
+  );
 }
