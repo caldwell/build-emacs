@@ -23,7 +23,7 @@ let
   });
 in
 
-pkgs.mkShell {
+pkgs.mkShellNoCC {
   buildInputs = [
     pkgs.autoconf
     pkgs.pkg-config or pkgs.pkgconfig
