@@ -143,6 +143,18 @@ class LibCollector
           orig_lib = orig_lib.sub(/@rpath/, rpath)
         end
 
+        while @origin[new_dep_lib] && @origin[new_dep_lib] != orig_path
+          # Not sure how to rename frameworks and we don't actually have any in our deps at the moment to test with...
+          raise "Sorry, one framework with different versions is not supported (#{@origin[new_dep_lib]} vs #{orig_path})" if framework
+
+          count = (count||0) + 1
+          puts "Duplicate dependency:\n    #{@origin[new_dep_lib]}\n    #{orig_path}"
+          parts = new_dep_lib.split('.')
+          parts[0] += "-dup-#{count}"
+          new_dep_lib = parts.join('.')
+          puts "  Retrying with new name #{new_dep_lib}"
+        end
+
 
         with_writable_mode(exe) {
           Vsh.system(*%W"install_name_tool -change #{orig_dep} #{File.join(rel_path_to_dest, new_dep_lib)} #{exe}") # Point to where we're about to copy the lib
@@ -150,7 +162,12 @@ class LibCollector
 
         unless @origin[new_dep_lib]
           Vsh.mkdir_p(@dest_dir)
-          Vsh.cp_r(orig_path, @dest_dir)
+          if framework
+            Vsh.cp_r(orig_path, @dest_dir)
+          else
+            Vsh.cp(orig_path, File.join(@dest_dir, new_dep_lib))
+          end
+          @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
         end
       elsif !line.match(%r{^(?:\s+(?:/System/|@executable_path/|/usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib|#{Regexp.escape(File.basename(@dest_dir))}))|^#{Regexp.escape(exe)}:})
