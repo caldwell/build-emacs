@@ -10,6 +10,6 @@ all: $(EXE)
 $(EXE): $(ARCH_EXES)
 	lipo -create -output $@ $^
 
-target/x86_64-apple-darwin/release/%: export MACOSX_DEPLOYMENT_TARGET=10.11
+target/x86_64-apple-darwin/release/%: export MACOSX_DEPLOYMENT_TARGET=10.12
 target/%-apple-darwin/release/$(EXE): $(SOURCES)
 	cargo build --release --target=$*-apple-darwin
