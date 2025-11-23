@@ -257,3 +257,29 @@ mod maybe_utf8 { // Is all this worth a more readable serialization between the 
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_maybe_utf8() {
+        assert!(matches!(MaybeUTF8::new("hello".into()), MaybeUTF8::UTF8(_)));
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            assert!(matches!(MaybeUTF8::new(OsString::from_vec(vec![0x41, 0x42, 0x81, 0x82, 0xff])), MaybeUTF8::Raw(_)));
+
+            let a = vec![MaybeUTF8::new("hi".into()),
+                         MaybeUTF8::new("there".into()),
+                         MaybeUTF8::new(OsString::from_vec(vec![255, 254, 253]))];
+            assert_eq!(serde_json::to_string(&a).expect("serde_json::to_string"), "[\"hi\",\"there\",{\"Unix\":[255,254,253]}]");
+        }
+
+        let b: Vec<MaybeUTF8> = serde_json::from_slice("[\"hi\",\"there\",{\"Unix\":[255,254,253]}]".as_bytes()).expect("serde_json::from_slice");
+        assert!(matches!(b[0], MaybeUTF8::UTF8(_)));
+        assert!(matches!(b[1], MaybeUTF8::UTF8(_)));
+        assert!(matches!(b[2], MaybeUTF8::Raw(_)));
+    }
+}
