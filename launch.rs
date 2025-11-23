@@ -38,8 +38,9 @@ use std::vec::Vec;
 use std::collections::hash_map::HashMap;
 use std::process::Command;
 use std::path::{Path,PathBuf};
-use std::ffi::{OsString};
+use std::ffi::{OsString,OsStr};
 use std::os::unix::process::CommandExt; // for .exec()
+use std::str::FromStr;
 
 use version_compare::{Cmp, Version};
 use glob::glob;
@@ -107,10 +108,8 @@ fn launch() -> Result<(), Box<dyn Error>> {
         // stick our own architecture dependent paths on the end of the PATH then they will override Emacs's paths
         // while not affecting any user paths.
         let base_dir = exe.parent().unwrap_or(Path::new(".")).canonicalize()?;
-        env.insert(OsString::from("PATH"), OsString::from(format!("{}:{}:{}",
-                                                                  &env.get(&OsString::from("PATH")).map(|p|p.to_string_lossy()).unwrap_or(std::borrow::Cow::Borrowed("")),
-                                                                  base_dir.join(format!("bin-{}", emacs.id)).to_string_lossy(),
-                                                                  base_dir.join(format!("libexec-{}", emacs.id)).to_string_lossy())));
+        path_append(&mut env, "PATH", &[&base_dir.join(format!("bin-{}", emacs.id)),
+                                        &base_dir.join(format!("libexec-{}", emacs.id))]);
 
         // Launch! Looks like it always errors because when exec() is successful it never returns
         Err(Command::new(emacs.exe.clone())
@@ -131,6 +130,18 @@ fn launch() -> Result<(), Box<dyn Error>> {
    Ok(())
 }
 
+// Append directories to a path env var (but only if the directories exist)
+fn path_append(env: &mut HashMap<OsString,OsString>, var: &str, additions: &[&Path]) {
+    let var = OsString::from_str(var).unwrap();
+    let mut new = env.get(&var).map(|v| v.clone()).unwrap_or(OsString::new());
+    for dir in additions.iter().filter(|dir| dir.is_dir()) {
+        if new.len() != 0 { new.push(OsStr::new(":")) }
+        new.push(dir.as_os_str());
+    }
+    if new.len() > 0 {
+        env.insert(var, new);
+    }
+}
 
 fn capture(command: &str) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(Command::new("sh").arg("-c").arg(command).output()?.stdout)?)
@@ -261,6 +272,28 @@ mod maybe_utf8 { // Is all this worth a more readable serialization between the 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_path_append() {
+        let mut env = HashMap::from([(OsString::from("var_a"), OsString::from("a:b")),
+                                     (OsString::from("var_b"), OsString::from("c")),
+                                     (OsString::from("var_d"), OsString::from("c:d")),
+        ]);
+        path_append(&mut env, "var_a", &[Path::new("/tmp/"),Path::new("/usr/")]);
+        assert_eq!(env[&OsString::from("var_a")], OsString::from("a:b:/tmp/:/usr/"));
+
+        path_append(&mut env, "var_b", &[]);
+        assert_eq!(env[&OsString::from("var_b")], OsString::from("c"));
+
+        path_append(&mut env, "var_c", &[Path::new("/tmp/"),Path::new("/usr/")]);
+        assert_eq!(env[&OsString::from("var_c")], OsString::from("/tmp/:/usr/"));
+
+        path_append(&mut env, "var_d", &[Path::new("/something/that/really/shouldn't/exist/")]);
+        assert_eq!(env[&OsString::from("var_d")], OsString::from("c:d"));
+
+        path_append(&mut env, "var_e", &[Path::new("/something/that/really/shouldn't/exist/")]);
+        assert_eq!(env.get(&OsString::from("var_e")), None);
+    }
 
     #[test]
     fn test_maybe_utf8() {
