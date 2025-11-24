@@ -55,10 +55,32 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
     Vsh.system(*(%W"make install"))                                                                  if options[:steps].include? 'install'
 
     if options[:steps].include? 'copylibs'
-      collector = LibCollector.new(dep_dir, "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}")
+      dest_lib = "nextstep/Emacs.app/Contents/MacOS/#{options[:libdir]}"
+      dependency_list = JSON.load(ENV['DEPENDENCY_DETAILS'] || '[]')
+      dependencies = Hash[dependency_list.map {|dep| [dep['name'], dep]}]
+
+      # For libgccjit we need to copy more tha just its dylibs (which are handled normally, below).
+      # See also: launch.rs (which sets it up LIBRARY_PATH so libgccjit can find its stuff)
+      if dependencies['libgccjit']
+        libgccjit_path = dependencies['libgccjit']['path']
+        Vsh.mkdir_p(["#{dest_lib}/libgccjit/apple-darwin", "#{dest_lib}/libgccjit/sdk-libs"])
+        gcc_versions = Dir[File.join(libgccjit_path, "lib/gcc/*-apple-darwin/*")]
+        raise "We only support one gcc version in libgccjit dir but there are more: #{gcc_versions.join("\n")}" unless gcc_versions.one?
+        Vsh.system(*%W"rsync -a --chmod=u+w --exclude gcc --exclude *.dylib #{libgccjit_path}/lib/ #{dest_lib}/libgccjit/")
+        Vsh.system(*%W"rsync -a --chmod=u+w #{gcc_versions.first}/ #{dest_lib}/libgccjit/apple-darwin/")
+        sdk_libs = File.join(Vsh.capture(*%W"xcrun --show-sdk-path"), "/usr/lib")
+        if sdk_libs.start_with? '/nix/store/'
+          Vsh.system(*%W"rsync -a --chmod=u+w --copy-unsafe-links --exclude swift #{sdk_libs}/ #{dest_lib}/libgccjit/sdk-libs/")
+        end
+        Vsh.chmod_R("u+w", "#{dest_lib}/libgccjit") # Stupid built-in rsync's --chmod is broken!
+      end
+
+      collector = LibCollector.new(dep_dir, dest_lib)
       ['nextstep/Emacs.app/Contents/MacOS/Emacs',
        *Dir['nextstep/Emacs.app/Contents/MacOS/bin/*',
-            'nextstep/Emacs.app/Contents/MacOS/libexec/*']].select {|file| Vsh.capture(*%W"file #{file}") =~ /Mach-O/}
+            'nextstep/Emacs.app/Contents/MacOS/libexec/*'],
+       *(File.directory?(native_lisp='nextstep/Emacs.app/Contents/Frameworks/native-lisp') ? Dir["#{native_lisp}/**/*.eln"] : []),
+      ].select {|file| Vsh.capture(*%W"file #{file}") =~ /Mach-O/}
         .each {|exe|
         collector.copy_libs(exe) # Install and adjust libs into the App.
       }

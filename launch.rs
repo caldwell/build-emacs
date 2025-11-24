@@ -111,6 +111,11 @@ fn launch() -> Result<(), Box<dyn Error>> {
         path_append(&mut env, "PATH", &[&base_dir.join(format!("bin-{}", emacs.id)),
                                         &base_dir.join(format!("libexec-{}", emacs.id))]);
 
+        // libgccjit looks in LIBRARY_PATH, so we need to set that if it is available
+        path_append(&mut env, "LIBRARY_PATH", &[&base_dir.join(format!("lib-{}/libgccjit/", emacs.id)),
+                                                &base_dir.join(format!("lib-{}/libgccjit/apple-darwin", emacs.id)),
+                                                &base_dir.join(format!("lib-{}/libgccjit/sdk-libs", emacs.id))]);
+
         // Launch! Looks like it always errors because when exec() is successful it never returns
         Err(Command::new(emacs.exe.clone())
             .args(std::env::args_os().skip(1))

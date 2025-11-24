@@ -47,6 +47,7 @@ let
     pkgs.librsvg
     tree-sitter
     pkgs.sqlite
+    pkgs.libgccjit
   ];
 
   dependency-details = (map (dep: {
