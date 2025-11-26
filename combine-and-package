@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-#  Copyright © 2014-2024 David Caldwell
+#  Copyright © 2014-2025 David Caldwell
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ end
 require script_base('verbose-shell.rb')
 Vsh = VerboseShell
 
-def combine(tars, out_app)
+def parse_tar_names(tars)
   base = nil
   emacsen = tars.map { |tarball_path|
     dir = File.dirname tarball_path
@@ -44,7 +44,10 @@ def combine(tars, out_app)
       :arch_version => $5 + '-' + $4.gsub('.','_') }
   }.sort {|a,b| a[:mac_os] <=> b[:mac_os] }
 
+  { emacsen: emacsen, base: base }
+end
 
+def combine(emacsen, out_app)
   Vsh.rm_rf(out_app)
 
   emacsen.each do |emacs|
@@ -99,8 +102,6 @@ def combine(tars, out_app)
   Vsh.cp(script_base('launch-nw'), File.join(out_app, "Contents/MacOS/emacs-nw"))
 
   add_nightly_version_to_info_plist(out_app, emacsen[0][:git_rev]) if emacsen[0][:git_rev] != ''
-
-  base
 end
 
 def add_nightly_version_to_info_plist(app, git_rev)
@@ -185,12 +186,14 @@ keychain_path = nil
   HELP
 end).parse!
 
-emacsen = ARGV.dup
-opts.abort("Need at least one tarball\n\n"+opts.help) if emacsen.length < 1
+tarballs = ARGV.dup
+opts.abort("Need at least one tarball\n\n"+opts.help) if tarballs.length < 1
+
+(emacsen, base) = parse_tar_names(tarballs).values_at(:emacsen, :base)
 
 out_app = 'combined/Emacs.app'
 Vsh.mkdir_p 'combined'
-base = combine(emacsen, out_app) if steps.include? 'combine'
+combine(emacsen, out_app) if steps.include? 'combine'
 
 code_sign(out_app, code_signer) if code_signer and steps.include? 'codesign'
 
