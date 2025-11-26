@@ -42,7 +42,7 @@ class LibCollector
       # actual system library, so lets just point to that, remove the rpath and be done.
       if %r{^\s+(?<cf>@rpath/CoreFoundation.framework/Versions/A/CoreFoundation)\s+} =~ line
         with_writable_mode(exe) {
-          Vsh.system(*%W"install_name_tool -change #{cf} 	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation #{exe}") # Wheeee!
+          Vsh.system(*%W"install_name_tool -change #{cf} /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation #{exe}") # Wheeee!
           Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
             .select {|c| /^\s*cmd LC_RPATH$/ =~ c}.map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
             .each {|rpath| Vsh.system(*%W"install_name_tool -delete_rpath #{rpath} #{exe}") }
