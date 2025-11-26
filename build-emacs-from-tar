@@ -167,6 +167,8 @@ out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_ve
 
 if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
   dep_dir = '/nix/store'
+  dependencies = "#{out_name}-dependencies.tar"
+  Vsh.cp ENV['DEPENDENCIES_TAR'], dependencies
 else
   dependencies = prepare_extra_deps dep_dir, out_name unless disable_deps
 end
