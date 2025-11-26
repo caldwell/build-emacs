@@ -43,12 +43,15 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
     # https://en.liujiacai.net/2022/09/03/emacs-maxopenfiles/
     # https://github.com/caldwell/build-emacs/issues/127
     configure_flags += ['CFLAGS=-DFD_SETSIZE=10000 -DDARWIN_UNLIMITED_SELECT']
+    make_flags=[]
 
     ENV['CC']="#{options[:cc]} #{min_os_flag} #{options[:extra_cc_options]}"
     Vsh.system_trace("CC=#{ENV['CC']}")
     Vsh.system(*(%W"./configure --with-ns")+configure_flags+(options[:extra_configure_flags]||[]))   if options[:steps].include? 'configure'
     Vsh.system(*(%W"make clean"))                                                                    if options[:steps].include? 'clean'
-    Vsh.system(*(%W"make")+parallel_flags)                                                           if options[:steps].include? 'make'
+    # Temporary work around for https://debbugs.gnu.org/cgi/bugreport.cgi?bug=79879 (Remove me when fixed!!)
+    make_flags.push('GNU_OBJC_CFLAGS=')  if (f=File.read("src/Makefile")) =~ /CC\s*=\s*[^\n]+-std=gnu23/ && f =~ /GNU_OBJC_CFLAGS\s*=\s*[^\n]+-std=c99/
+    Vsh.system(*(%W"make")+parallel_flags+make_flags)                                                if options[:steps].include? 'make'
     Vsh.system(*(%W"make install"))                                                                  if options[:steps].include? 'install'
 
     if options[:steps].include? 'copylibs'
