@@ -81,13 +81,13 @@ end
 
 
 def prepare_extra_deps(dep_dir, out_name)
-  extra_source = "#{out_name}-extra-source"
-  Vsh.rm_rf extra_source
+  dependencies = "#{out_name}-dependencies"
+  Vsh.rm_rf dependencies
   build_dep = BuildDependencies.new(dep_dir)
   build_dep.ensure()
-  build_dep.export_sources(extra_source)
-  Vsh.system(*(%W"tar cf #{extra_source}.tar #{extra_source}"))
-  "#{extra_source}.tar"
+  build_dep.export_sources(dependencies)
+  Vsh.system(*(%W"tar cf #{dependencies}.tar #{dependencies}"))
+  "#{dependencies}.tar"
 end
 
 def report_strays(stray)
@@ -168,7 +168,7 @@ out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_ve
 if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
   dep_dir = '/nix/store'
 else
-  extra_source = prepare_extra_deps dep_dir, out_name unless disable_deps
+  dependencies = prepare_extra_deps dep_dir, out_name unless disable_deps
 end
 
 
@@ -182,4 +182,4 @@ end
 
 binary = build_emacs src_dir, dep_dir, out_name, options
 
-puts "Built #{binary}, #{extra_source||''}"
+puts "Built #{binary}, #{dependencies||''}"

@@ -155,7 +155,7 @@ Example
     emacs-25.1.tar.bz2
     $ ./build-emacs-from-tar -v -j 8 emacs-25.1.tar.bz2 release
       ... Lots out output snipped ...
-    Built Emacs-25.1-10.12-x86_64.tar.bz2, Emacs-25.1-10.12-x86_64-extra-source.tar
+    Built Emacs-25.1-10.12-x86_64.tar.bz2, Emacs-25.1-10.12-x86_64-dependencies.tar
     $ ./combine-and-package -v Emacs-25.1-10.12-x86_64.tar.bz2
       ... More output snipped ...
     created: Emacs-25.1-universal.dmg
