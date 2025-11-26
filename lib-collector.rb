@@ -29,9 +29,10 @@ class LibCollector
     options[:rpath] ||= [];
     options[:depth] ||= 0;
     puts "#{'='*(options[:depth]+1)*2}> Processing #{exe}" if Vsh.verbose
+    new_id = Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir).dirname).to_s
     with_writable_mode(exe) {
       # remove our local build path from the id to leak as litle as possible (not that it really matters)
-      Vsh.system(*%W"install_name_tool -id #{Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir).dirname).to_s} #{exe}")
+      Vsh.system(*%W"install_name_tool -id #{new_id} #{exe}")
     }
     stray={ lib:[], path:[], exe:exe }
     Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
@@ -106,6 +107,7 @@ class LibCollector
           @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
         end
+      elsif line.strip.start_with?("#{new_id} ")
       elsif !line.match(%r{^(?:\s+(?:/System/|@(loader|executable)_path/|@rpath/|/usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib|#{Regexp.escape(File.basename(@dest_dir))}))|^#{Regexp.escape(exe)}:})
         stray[:lib].push(line)
       end
