@@ -1,5 +1,10 @@
 let
-  pkgs = import <nixpkgs> {};
+  pkgs = import (builtins.fetchGit {
+      name = "emacs-dependencies-base";
+      url = "https://github.com/NixOS/nixpkgs/";
+      ref = "refs/heads/nixpkgs-unstable";
+      rev = "21eda9bc80bef824a037582b1e5a43ba74e92daa";
+    }) {};
 
   ncurses-no-nix-store = pkgs.ncurses.overrideAttrs (finalAttrs: previousAttrs: {
     configureFlags = previousAttrs.configureFlags ++ [ "--with-terminfo-dirs=/usr/share/terminfo" ];
