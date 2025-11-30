@@ -54,43 +54,12 @@ let
     version = dep.version;
     path = "${dep}";
     nix_source = "${dep.src}";
-    source =
-      let archive-name = builtins.baseNameOf dep.src.resolvedUrl or dep.src.url;
-      in if (pkgs.lib.hasSuffix archive-name dep.src.outPath)
-         then archive-name
-         else "${dep.name}.tar.bz2";
   }) deps);
-
-  dependencies.tar = pkgs.stdenv.mkDerivation rec {
-    name = "dependencies.tar";
-    buildInputs = [ pkgs.ruby ];
-    dontUnpack = true;
-    manifest = builtins.toJSON (map (deets: builtins.removeAttrs deets ["path"]) dependency-details);
-    buildPhase = ''
-      (set -x
-      mkdir dependencies
-      ruby -r json -r fileutils <<EOF
-        manifest=JSON.load(ENV['manifest'])
-        manifest.each do |dep|
-          if File.directory? dep['nix_source']
-            system(*%W"tar cjf dependencies/#{dep['name']}-#{dep['version']}.tar.bz2 -C #{dep['nix_source']} --transform s/\./#{dep['name']}-#{dep['version']}/ .")
-          else
-            FileUtils.cp dep['nix_source'], "dependencies/#{dep['source']}"
-          end
-        end
-        File.write("dependencies/manifest.json", manifest.to_json)
-      EOF
-      )
-    '';
-    installPhase = ''
-      tar cf "$out" dependencies
-    '';
-  };
 in
 
 pkgs.mkShell {
   passthru = {
-    inherit pkgs deps dependency-details dependencies ncurses-no-nix-store tree-sitter-backport system;
+    inherit pkgs deps dependency-details ncurses-no-nix-store tree-sitter-backport system;
   };
 
   buildInputs = [
@@ -98,7 +67,6 @@ pkgs.mkShell {
     pkgs.pkg-config or pkgs.pkgconfig
     ncurses-no-nix-store
     pkgs.zlib
-
   ] ++ deps
   ++ (
     # This magics check for the existence of darwin.apple_sdk.frameworks.AppKit which is only available in the
@@ -111,5 +79,4 @@ pkgs.mkShell {
 
   # Publish some Nix details that build-emacs-from-tar can use
   DEPENDENCY_DETAILS = builtins.toJSON dependency-details;
-  DEPENDENCIES_TAR = "${dependencies.tar}";
 }

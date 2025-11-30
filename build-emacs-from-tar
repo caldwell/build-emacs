@@ -14,8 +14,9 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require 'optparse'
 require 'fileutils'
+require 'json'
+require 'optparse'
 require 'pathname'
 require_relative 'build-dependencies'
 require_relative 'verbose-shell'
@@ -167,8 +168,10 @@ out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_ve
 
 if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
   dep_dir = '/nix/store'
-  dependencies = "#{out_name}-dependencies.tar"
-  Vsh.cp ENV['DEPENDENCIES_TAR'], dependencies
+  dependencies = "#{out_name}-dependencies.json"
+  File.write(dependencies, JSON.load(ENV['DEPENDENCY_DETAILS'] || '[]')
+    .map {|dep| dep.reject {|k| k == 'path'} }
+    .to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
 else
   dependencies = prepare_extra_deps dep_dir, out_name unless disable_deps
 end
