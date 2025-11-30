@@ -1,15 +1,17 @@
 let
   system = {
     x86_64-darwin = {
-      pkgs = nixpkgs_at_rev "21eda9bc80bef824a037582b1e5a43ba74e92daa";
+      pkgs = nixpkgs_at_rev "882842d2a908700540d206baa79efb922ac1c33d";
+      tree-sitter = tree-sitter-backport;
     };
 
     aarch64-darwin = {
       pkgs = nixpkgs_at_rev "a8d610af3f1a5fb71e23e08434d8d61a466fc942";
+      tree-sitter = pkgs.tree-sitter;
     };
   }.${builtins.currentSystem} or (throw "Unknown macOS system ${builtins.currentSystem}");
 
-  inherit (system) pkgs;
+  inherit (system) pkgs tree-sitter;
 
   nixpkgs_at_rev = rev: import (builtins.fetchGit {
     name = "emacs-dependencies-base";
@@ -17,6 +19,22 @@ let
     ref = "refs/heads/nixpkgs-unstable";
     inherit rev;
   }) {};
+
+  tree-sitter-backport = pkgs.tree-sitter.overrideAttrs (finalAttrs: previousAttrs: {
+    version = "0.25.10";
+    hash = "sha256-aHszbvLCLqCwAS4F4UmM3wbSb81QuG9FM7BDHTu1ZvM=";
+    cargoHash = "sha256-/gYOehFW190STjkIDDH3vJjG45sBww6E+1Rz09aM9Cs=";
+
+    # This will only work with older nixpkgs. In e33a761efdec0ff79cf5ae2d309c95c62fc72c12 (2024-12-08) they switched to using a patch file.
+    postPatch = ''
+      # remove web interface
+      sed -e '/pub mod playground/d' \
+          -i cli/src/lib.rs
+      sed -e 's/playground,//' \
+          -e 's/playground::serve(&\?grammar_path.*$/println!("ERROR: web-ui is not available in this nixpkgs build; enable the webUISupport"); std::process::exit(1);/' \
+          -i cli/src/main.rs
+    '';
+  });
 
   ncurses-no-nix-store = pkgs.ncurses.overrideAttrs (finalAttrs: previousAttrs: {
     configureFlags = previousAttrs.configureFlags ++ [ "--with-terminfo-dirs=/usr/share/terminfo" ];
@@ -27,7 +45,7 @@ let
     pkgs.jansson
     pkgs.libxml2
     pkgs.librsvg
-    pkgs.tree-sitter
+    tree-sitter
     pkgs.sqlite
   ];
 
@@ -72,7 +90,7 @@ in
 
 pkgs.mkShell {
   passthru = {
-    inherit pkgs deps dependency-details dependencies ncurses-no-nix-store system;
+    inherit pkgs deps dependency-details dependencies ncurses-no-nix-store tree-sitter-backport system;
   };
 
   buildInputs = [
