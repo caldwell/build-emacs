@@ -8,13 +8,8 @@ Vsh.verbose = true
 
 abort "Usage: #{$0} dep_tar_files..." unless ARGV.count > 0
 
-def shortest_common_prefix(*strings)
-  max, min = strings.max.split(//), strings.min.split(//)
-  strings[0].slice(0, max.each_with_index.find { |x, y| x != min[y] }[1])
-end
-
 deps = ARGV.dup
-base = shortest_common_prefix(*deps.map { |d| File.basename(d) })
+base = File.basename(deps[0]).sub(/-[\d.]+-[^-]+-dependencies\.(json|tar)$/, '')
 
 deps_dir = "#{base}-dependencies"
 Vsh.rm_rf   deps_dir
