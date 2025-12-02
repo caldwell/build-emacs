@@ -1,26 +1,38 @@
 #!/usr/bin/env ruby
 
+require 'json'
 require_relative 'verbose-shell'
+
 Vsh = VerboseShell
 Vsh.verbose = true
 
-base = ARGV.shift or abort "Usage: #{$0} base-name"
+abort "Usage: #{$0} dep_tar_files..." unless ARGV.count > 0
 
-deps = "#{base}-dependencies"
-Vsh.rm_rf   deps
-Vsh.mkdir_p "#{deps}/archives"
+def shortest_common_prefix(*strings)
+  s = []
+  a, b = strings.max.split(//), strings.min.split(//)
+  a.each_with_index { |x, y| s.push(y) if x != b[y] }
+  a[0...s[0]].join
+end
 
-Dir["label=*/*.tar"].each do |ar|
-  Vsh.cd("#{deps}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
+deps = ARGV.dup
+base = shortest_common_prefix(*deps.map { |d| File.basename(d) })
+
+deps_dir = "#{base}-dependencies"
+Vsh.rm_rf   deps_dir
+Vsh.mkdir_p "#{deps_dir}/archives"
+
+deps.each do |ar|
+  Vsh.cd("#{deps_dir}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
   Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
     puts f
     n=File.basename f
     d=File.basename ar
     d=d.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
-    Vsh.mkdir_p "#{deps}/#{d}"
-    Vsh.ln_sf "../archives/#{n}", "#{deps}/#{d}/"
+    Vsh.mkdir_p "#{deps_dir}/#{d}"
+    Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{d}/"
   end
 end
 
-Vsh.system(*%W"tar cf #{deps}.tar #{deps}")
-Vsh.rm_rf deps
+Vsh.system(*%W"tar cf #{deps_dir}.tar #{deps_dir}")
+Vsh.rm_rf deps_dir
