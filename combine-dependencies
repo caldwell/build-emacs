@@ -1,26 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-set -e
-set -x
+require_relative 'verbose-shell'
+Vsh = VerboseShell
+Vsh.verbose = true
 
-base="${1?Usage: $0 base-name}"
+base = ARGV.shift or abort "Usage: #{$0} base-name"
 
-deps="${base}-dependencies"
-rm -rf  "$deps"
-mkdir -p "$deps/archives"
+deps = "#{base}-dependencies"
+Vsh.rm_rf   deps
+Vsh.mkdir_p "#{deps}/archives"
 
-for ar in label=*/*.tar; do
-    (cd "$deps/archives" && tar xf ../../"$ar" --strip-components 1)
-    for f in $(tar tf "$ar" "*.tar.*"); do
-        echo "$f"
-        n=$(basename "$f")
-        d=$(basename "$ar")
-        d=${d#"$base-"}
-        d=${d%-dependencies.tar}
-        mkdir -p "$deps/$d"
-        ln -sf "../archives/$n" "$deps/$d/"
-    done
-done
+Dir["label=*/*.tar"].each do |ar|
+  Vsh.cd("#{deps}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
+  Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
+    puts f
+    n=File.basename f
+    d=File.basename ar
+    d=d.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
+    Vsh.mkdir_p "#{deps}/#{d}"
+    Vsh.ln_sf "../archives/#{n}", "#{deps}/#{d}/"
+  end
+end
 
-tar cf "$deps.tar" "$deps"
-rm -rf "$deps"
+Vsh.system(*%W"tar cf #{deps}.tar #{deps}")
+Vsh.rm_rf deps
