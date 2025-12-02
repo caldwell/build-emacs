@@ -6,18 +6,24 @@ require_relative 'verbose-shell'
 Vsh = VerboseShell
 Vsh.verbose = true
 
-abort "Usage: #{$0} dep_tar_files..." unless ARGV.count > 0
+abort "Usage: #{$0} dep_tar_or_json_files..." unless ARGV.count > 0
 
 deps = ARGV.dup
 base = File.basename(deps[0]).sub(/-[\d.]+-[^-]+-dependencies\.(json|tar)$/, '')
+
+tars, jsons = deps.partition { |os_arch| os_arch.end_with? '.tar' }
+
+report = []
 
 deps_dir = "#{base}-dependencies"
 Vsh.rm_rf   deps_dir
 Vsh.mkdir_p "#{deps_dir}/archives"
 
-deps.each do |ar|
+tars.each do |ar|
   os_arch=File.basename ar
   os_arch=os_arch.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
+  os, arch = os_arch.split '-'
+  r = { osversion: os, architecture: arch, source: "#{deps_dir}.tar", dependencies: [] }
   Vsh.cd("#{deps_dir}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
   Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
     puts f
@@ -25,7 +31,23 @@ deps.each do |ar|
     Vsh.mkdir_p "#{deps_dir}/#{os_arch}"
     Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{os_arch}/"
   end
+  if File.exist? "#{deps_dir}/archives/manifest.json"
+    r[:dependencies] = JSON.load_file("#{deps_dir}/archives/manifest.json")
+  end
+
+  report.push(r)
 end
 
 Vsh.system(*%W"tar cf #{deps_dir}.tar #{deps_dir}")
 Vsh.rm_rf deps_dir
+
+report += jsons.map do |manifest|
+  os_arch = File.basename(manifest).delete_prefix("#{base}-").delete_suffix('-dependencies.json')
+  (os, arch) = os_arch.split '-'
+  { osversion: os,
+    architecture: arch,
+    dependencies: JSON.load_file(manifest) }
+end
+
+puts report.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup) if Vsh.verbose > 0
+File.write("#{base}-dependencies.json", report.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
