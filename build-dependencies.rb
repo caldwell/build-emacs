@@ -13,6 +13,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'fileutils'
+require 'json'
 require 'pathname'
 require 'pp'
 
@@ -68,12 +69,15 @@ class BuildDependencies
 
   def export_sources(dir, all=false)
     Vsh.mkdir_p(dir)
+    manifest = []
     @deps.each {|dep|
       dep.fetch
       if all || !dep.builddep
         Vsh.rm_f(File.join(dir, File.basename(dep.archive_path)))
         Vsh.ln(dep.archive_path, dir)
+        manifest.push({ name: dep.name, version: dep.version, tar_source: File.basename(dep.archive_path) })
       end
     }
+    File.write(File.join(dir, "manifest.json"), manifest.to_json)
   end
 end
