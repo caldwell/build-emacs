@@ -16,12 +16,12 @@ Vsh.rm_rf   deps_dir
 Vsh.mkdir_p "#{deps_dir}/archives"
 
 deps.each do |ar|
+  os_arch=File.basename ar
+  os_arch=os_arch.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
   Vsh.cd("#{deps_dir}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
   Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
     puts f
     n=File.basename f
-    os_arch=File.basename ar
-    os_arch=os_arch.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
     Vsh.mkdir_p "#{deps_dir}/#{os_arch}"
     Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{os_arch}/"
   end
