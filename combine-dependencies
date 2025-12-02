@@ -15,31 +15,33 @@ tars, jsons = deps.partition { |os_arch| os_arch.end_with? '.tar' }
 
 report = []
 
-deps_dir = "#{base}-dependencies"
-Vsh.rm_rf   deps_dir
-Vsh.mkdir_p "#{deps_dir}/archives"
+if tars.count >  0
+  deps_dir = "#{base}-dependencies"
+  Vsh.rm_rf   deps_dir
+  Vsh.mkdir_p "#{deps_dir}/archives"
 
-tars.each do |ar|
-  os_arch=File.basename ar
-  os_arch=os_arch.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
-  os, arch = os_arch.split '-'
-  r = { osversion: os, architecture: arch, source: "#{deps_dir}.tar", dependencies: [] }
-  Vsh.cd("#{deps_dir}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
-  Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
-    puts f
-    n=File.basename f
-    Vsh.mkdir_p "#{deps_dir}/#{os_arch}"
-    Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{os_arch}/"
-  end
-  if File.exist? "#{deps_dir}/archives/manifest.json"
-    r[:dependencies] = JSON.load_file("#{deps_dir}/archives/manifest.json")
+  tars.each do |ar|
+    os_arch=File.basename ar
+    os_arch=os_arch.delete_prefix("#{base}-").delete_suffix("-dependencies.tar")
+    os, arch = os_arch.split '-'
+    r = { osversion: os, architecture: arch, source: "#{deps_dir}.tar", dependencies: [] }
+    Vsh.cd("#{deps_dir}/archives") { Vsh.system(*%W"tar xf ../../#{ar} --strip-components 1") }
+    Vsh.capture(*%W"tar tf #{ar} *.tar.*").split.each do |f|
+      puts f
+      n=File.basename f
+      Vsh.mkdir_p "#{deps_dir}/#{os_arch}"
+      Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{os_arch}/"
+    end
+    if File.exist? "#{deps_dir}/archives/manifest.json"
+      r[:dependencies] = JSON.load_file("#{deps_dir}/archives/manifest.json")
+    end
+
+    report.push(r)
   end
 
-  report.push(r)
+  Vsh.system(*%W"tar cf #{deps_dir}.tar #{deps_dir}")
+  Vsh.rm_rf deps_dir
 end
-
-Vsh.system(*%W"tar cf #{deps_dir}.tar #{deps_dir}")
-Vsh.rm_rf deps_dir
 
 report += jsons.map do |manifest|
   os_arch = File.basename(manifest).delete_prefix("#{base}-").delete_suffix('-dependencies.json')
