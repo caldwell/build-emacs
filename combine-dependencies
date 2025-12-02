@@ -9,10 +9,8 @@ Vsh.verbose = true
 abort "Usage: #{$0} dep_tar_files..." unless ARGV.count > 0
 
 def shortest_common_prefix(*strings)
-  s = []
-  a, b = strings.max.split(//), strings.min.split(//)
-  a.each_with_index { |x, y| s.push(y) if x != b[y] }
-  a[0...s[0]].join
+  max, min = strings.max.split(//), strings.min.split(//)
+  strings[0].slice(0, max.each_with_index.find { |x, y| x != min[y] }[1])
 end
 
 deps = ARGV.dup
