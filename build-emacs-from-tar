@@ -123,6 +123,7 @@ end
 
 arch=`uname -m`.chomp.to_sym
 disable_deps=false
+enable_x = false
 extra_rev = ''
 options = { :extra_configure_flags => [] }
 
@@ -136,6 +137,7 @@ options = { :extra_configure_flags => [] }
   opts.on("-A", "--add-configure-flags FLAGS", "Additional configure flags") { |c| options[:extra_configure_flags].push(c) }
   opts.on("-m", "--minimum-os VERSION", "Minimum OS target") {|v| options[:min_os] = v }
   opts.on(      "--test-steps STEPS", "Only run STEPS, a comma-separated-list (default: #{$steps.join(',')})") {|s| options[:steps] = s.split(',') }
+  opts.on(      "--enable-x", "Add X windows toolkit support when configuring") { |b| enable_x = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -160,6 +162,7 @@ options[:min_os] ||=  '11'   if arch == :arm64 # Build for the oldest supported 
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
+options[:extra_configure_flags] += %W"--with-x-toolkit=#{enable_x ? 'yes' : 'no'}"
 options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
 
 out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
