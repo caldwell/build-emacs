@@ -33,7 +33,7 @@ if tars.count >  0
       Vsh.ln_sf "../archives/#{n}", "#{deps_dir}/#{os_arch}/"
     end
     if File.exist? "#{deps_dir}/archives/manifest.json"
-      r[:dependencies] = JSON.load_file("#{deps_dir}/archives/manifest.json")
+      r[:dependencies] = JSON.parse(File.read("#{deps_dir}/archives/manifest.json"))
     end
 
     report.push(r)
@@ -48,7 +48,7 @@ report += jsons.map do |manifest|
   (os, arch) = os_arch.split '-'
   { osversion: os,
     architecture: arch,
-    dependencies: JSON.load_file(manifest) }
+    dependencies: JSON.parse(File.read(manifest)) }
 end
 
 puts report.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup) if Vsh.verbose > 0
