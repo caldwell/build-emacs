@@ -13,7 +13,9 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'json'
 require 'optparse'
+require 'time'
 require_relative 'ftp-versions'
 require_relative 'verbose-shell'
 Vsh = VerboseShell
@@ -40,4 +42,17 @@ Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]})) unless dry_ru
 if latest[:file].end_with?('.xz') && !dry_run
   newfile=File.basename(latest[:file], '.xz')+'.bz2'
   Vsh.system('bash', '-c', 'xzcat "$0" | bzip2 > "$1"', latest[:file], newfile)
+  latest[:file] = newfile
 end
+
+meta = {
+  emacs_rev: latest[:version].to_s,
+  date: Time.parse(latest[:date]).iso8601,
+  kind: url.match?(/pretest/) ? "pretest" : "release",
+  git_ref: nil,
+  vcs: nil,
+  vcs_rev: nil,
+  build_id: latest[:version].to_s,
+}.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup)
+puts "Writing #{latest[:file]}.meta: #{meta}" if Vsh.verbose > 0
+File.write("#{latest[:file]}.meta", "#{meta}\n") unless dry_run
