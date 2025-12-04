@@ -76,7 +76,7 @@ metas.each do |meta|
   out_meta.build ||= build
   abort "Mismatched .metas" unless build == out_meta.build
 
-  meta.features = {
+  lib2feat = {
     'gnutls'      => 'gnutls',
     'jansson'     => 'jansson',
     'libxml2'     => 'libxml2',
@@ -84,7 +84,8 @@ metas.each do |meta|
     'tree-sitter' => 'tree-sitter',
     'sqlite'      => 'sqlite',
     'libgccjit'   => 'native-comp',
-  }.filter_map { |dep_name, feature| meta['deps'].find { |dep| dep['name'] == dep_name } && feature }
+  }
+  meta.features = lib2feat.values_at(*meta.deps.map(&:name) & lib2feat.keys)
 
   out_meta.variants << meta
 end
