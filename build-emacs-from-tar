@@ -146,7 +146,7 @@ kind       = ARGV.shift || opts.abort("Missing <KIND>\n\n"+opts.help)
 
 label = kind == 'pretest' ? 'pretest-' : ''
 version = source_tar =~ %r{^(?:.*/)?emacs-(.*)\.tar} && $1 || throw("couldn't parse version from #{source_tar}")
-trunk = !!(version =~ /^\d{4}-\d{2}-\d{2}/)
+trunk = version.match?(/^\d{4}-\d{2}-\d{2}/)
 
 src_dir = 'emacs-source'
 dep_dir = File.expand_path("dep")
@@ -163,9 +163,9 @@ options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
 options[:extra_configure_flags] += %W"--with-x-toolkit=#{enable_x ? 'yes' : 'no'}"
-options[:libdir] = 'lib-' + arch.to_s + '-' + (options[:min_os] || os_maj_version).to_s.gsub('.','_') # see similar gsub in combine-and-package
+options[:libdir] = "lib-#{arch}-#{options[:min_os] || os_maj_version}".to_s.gsub('.', '_') # see similar gsub in combine-and-package
 
-out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch.to_s}"
+out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch}"
 
 if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
   dep_dir = '/nix/store'
