@@ -18,9 +18,12 @@ require_relative 'ftp-versions'
 require_relative 'verbose-shell'
 Vsh = VerboseShell
 
+dry_run = false
+
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <URL> [options]\n\n<URL> can be a full url or 'pretest' or 'release'\n\n"
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
+  opts.on("-n", "--dry-run", "Don't actually download emacs") { dry_run = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -30,10 +33,11 @@ url={ "release" => FtpVersions::ReleaseUrl, "pretest" => FtpVersions::PretestUrl
 
 latest = FtpVersions.versions(url).last
 
-Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]}))
+puts "Would have downloaded #{latest[:url]}" if Vsh.verbose > 0 && dry_run
+Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]})) unless dry_run
 
 # Old Mac OS Versions don't have .xz support. Rather than requiring installing it, just convert to .bz2 which *is* supported.
-if latest[:file].end_with? '.xz'
+if latest[:file].end_with?('.xz') && !dry_run
   newfile=File.basename(latest[:file], '.xz')+'.bz2'
   Vsh.system('bash', '-c', 'xzcat "$0" | bzip2 > "$1"', latest[:file], newfile)
   #File.unlink(latest[:file]) # Keep the original around for now.
