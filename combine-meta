@@ -1,0 +1,101 @@
+#!/usr/bin/env ruby
+#  Copyright © 2025 David Caldwell
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+require 'json'
+require 'optparse'
+
+class Meta < Struct.new(:build, :emacs_rev, :traits, :variants, keyword_init: true)
+  def initialize(build:nil, emacs_rev:nil, traits:[], variants:[])
+    super
+    self.build = Build.new(build) if build
+    self.variants = variants.map { |v| Variant.new(v) }
+  end
+  def to_json(state); self.to_h.to_json(state) end
+end
+
+class Variant < Struct.new(:os, :arch, :features, :build, :deps, keyword_init: true)
+  def initialize(os:nil, arch:nil, features:[], deps:[], build:nil)
+    super
+    self.build = Build.new(**build) if build
+    self.deps = deps.map { |d| Dep.new(**d) }
+  end
+  def to_json(state); self.to_h.tap {|h| h.delete(:build) unless h[:build]}.to_json(state) end
+end
+
+class Build < Struct.new(:name, :emacs_rev, :date, :arch, :os_rev, :kind, :git_ref, :vcs, :vcs_rev, :build_id, :version, keyword_init: true)
+  def to_json(state); self.to_h.to_json(state) end
+end
+
+class Dep < Struct.new(:name, :version, :nix_source, :tar_source, keyword_init: true)
+  def to_json(state); self.to_h.tap {|h| h.delete(:tar_source) unless h[:tar_source]
+                                         h.delete(:nix_source) unless h[:nix_source]
+                                    }.to_json(state) end
+end
+
+def one(things, arr)
+  abort "No #{things} found" if arr.count == 0
+  abort "Too many #{things}:\n#{arr.join("\n")}" if arr.count > 1
+  arr.first
+end
+
+def unique_or(arr, unless_unique)
+  vals = arr.uniq
+  return vals.first if vals.count == 1
+  return unless_unique if vals.count > 1
+  abort "Should never happen"
+end
+
+(opts=OptionParser.new do |opts|
+  opts.banner = "Usage:\n\t#{$0} [options] <meta-file>..."
+  opts.on_tail("-h", "--help") { puts opts; exit }
+end).parse!
+
+opts.abort("Missing <meta-file> file(s)\n\n#{opts.help}") unless ARGV.count > 0
+
+meta_files = ARGV
+metas = meta_files.map { |name| Variant.new(**JSON.parse(File.read(name), symbolize_names: true)) }
+
+out_meta = Meta.new(traits: %w[rust-launcher code-signed notarized], # Everything currently is like this.
+                    variants: [])
+
+metas.each do |meta|
+  build = meta.build
+  meta.build = nil
+  out_meta.build ||= build
+  abort "Mismatched .metas" unless build == out_meta.build
+
+  meta.features = {
+    'gnutls'      => 'gnutls',
+    'jansson'     => 'jansson',
+    'libxml2'     => 'libxml2',
+    'librsvg'     => 'librsvg',
+    'tree-sitter' => 'tree-sitter',
+    'sqlite'      => 'sqlite',
+    'libgccjit'   => 'native-comp',
+  }.filter_map { |dep_name, feature| meta['deps'].find { |dep| dep['name'] == dep_name } && feature }
+
+  out_meta.variants << meta
+end
+
+out_meta.build.arch = unique_or(metas.map { |m| m.arch }, 'universal')
+out_meta.build.os_rev = unique_or(metas.map { |m| m.os }, '')
+
+out_meta.build.name = one("dmgs", Dir["Emacs*-#{out_meta.build.version}-*.dmg"])
+
+# I moved this up to the top for some reason that I don't remember.
+out_meta.emacs_rev = out_meta.build.emacs_rev
+out_meta.build.emacs_rev = nil
+
+File.write("#{out_meta.build.name}.meta", out_meta.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
