@@ -79,5 +79,6 @@ class BuildDependencies
       end
     }
     File.write(File.join(dir, "manifest.json"), manifest.to_json)
+    manifest
   end
 end

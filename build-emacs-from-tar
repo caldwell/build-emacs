@@ -84,9 +84,9 @@ def prepare_extra_deps(dep_dir, out_name)
   Vsh.rm_rf dependencies
   build_dep = BuildDependencies.new(dep_dir)
   build_dep.ensure()
-  build_dep.export_sources(dependencies)
+  manifest = build_dep.export_sources(dependencies)
   Vsh.system(*(%W"tar cf #{dependencies}.tar #{dependencies}"))
-  "#{dependencies}.tar"
+  ["#{dependencies}.tar", manifest]
 end
 
 def report_strays(stray)
@@ -126,6 +126,7 @@ disable_deps=false
 enable_x = false
 extra_rev = ''
 options = { :extra_configure_flags => [] }
+meta = nil
 
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} <SOURCE_TARBALL> <KIND> [options]"
@@ -138,6 +139,7 @@ options = { :extra_configure_flags => [] }
   opts.on("-m", "--minimum-os VERSION", "Minimum OS target") {|v| options[:min_os] = v }
   opts.on(      "--test-steps STEPS", "Only run STEPS, a comma-separated-list (default: #{$steps.join(',')})") {|s| options[:steps] = s.split(',') }
   opts.on(      "--enable-x", "Add X windows toolkit support when configuring") { |b| enable_x = true }
+  opts.on(      "--meta METAFILE", "Take in a source meta and output a build meta") { |m| meta = JSON.parse(File.read(m)) }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -163,20 +165,20 @@ options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
 options[:extra_configure_flags] += %W"--with-x-toolkit=#{enable_x ? 'yes' : 'no'}"
-options[:libdir] = "lib-#{arch}-#{options[:min_os] || os_maj_version}".to_s.gsub('.', '_') # see similar gsub in combine-and-package
+os = options[:min_os] || os_maj_version
+options[:libdir] = "lib-#{arch}-#{os}".to_s.gsub('.', '_') # see similar gsub in combine-and-package
 
-out_name = "Emacs-#{label}#{version}#{extra_rev}-#{options[:min_os] || os_maj_version}-#{arch}"
+out_name = "Emacs-#{label}#{version}#{extra_rev}-#{os}-#{arch}"
 
 if ENV["IN_NIX_SHELL"] # If we're in a nix-shell then get our deps from there
   dep_dir = '/nix/store'
-  dependencies = "#{out_name}-dependencies.json"
-  File.write(dependencies, JSON.load(ENV['DEPENDENCY_DETAILS'] || '[]')
+  dependency_details = JSON.parse(ENV['DEPENDENCY_DETAILS'] || '[]')
     .map {|dep| dep.reject {|k| k == 'path'} }
-    .to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
+  dependencies = "#{out_name}-dependencies.json"
+  File.write(dependencies, dependency_details.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
 else
-  dependencies = prepare_extra_deps dep_dir, out_name unless disable_deps
+  dependencies, dependency_details = prepare_extra_deps dep_dir, out_name unless disable_deps
 end
-
 
 if !options[:steps] or options[:steps].include? 'unpack'
   Vsh.rm_rf src_dir
@@ -188,4 +190,16 @@ end
 
 binary = build_emacs src_dir, dep_dir, out_name, options
 
-puts "Built #{binary}, #{dependencies||''}"
+if meta
+  meta_out_file = "#{binary}.meta"
+  meta_out = {
+    build: meta.merge(version: "#{version}#{extra_rev}"),
+    os: os,
+    arch: arch.to_s,
+    deps: dependency_details,
+  }.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup)
+  puts "Writing #{meta_out_file}: #{meta_out}"
+  File.write(meta_out_file, meta_out)
+end
+
+puts "Built #{binary}, #{dependencies||''}, #{meta_out_file||''}"
