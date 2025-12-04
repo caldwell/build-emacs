@@ -57,8 +57,11 @@ def unique_or(arr, unless_unique)
   abort "Should never happen"
 end
 
+verbose = false
+
 (opts=OptionParser.new do |opts|
   opts.banner = "Usage:\n\t#{$0} [options] <meta-file>..."
+  opts.on("-v", "--verbose", "Turn up the verbosity") { verbose = true }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
@@ -99,4 +102,6 @@ out_meta.build.name = one("dmgs", Dir["Emacs*-#{out_meta.build.version}-*.dmg"])
 out_meta.emacs_rev = out_meta.build.emacs_rev
 out_meta.build.emacs_rev = nil
 
-File.write("#{out_meta.build.name}.meta", out_meta.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup))
+out_meta_json = out_meta.to_json(JSON::PRETTY_STATE_PROTOTYPE.dup)
+puts "Writing #{out_meta.build.name}.meta: #{out_meta_json}" if verbose
+File.write("#{out_meta.build.name}.meta", out_meta_json)
