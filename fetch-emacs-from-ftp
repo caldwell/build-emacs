@@ -40,5 +40,4 @@ Vsh.system *(%W(curl --continue-at - --silent -O #{latest[:url]})) unless dry_ru
 if latest[:file].end_with?('.xz') && !dry_run
   newfile=File.basename(latest[:file], '.xz')+'.bz2'
   Vsh.system('bash', '-c', 'xzcat "$0" | bzip2 > "$1"', latest[:file], newfile)
-  #File.unlink(latest[:file]) # Keep the original around for now.
 end
