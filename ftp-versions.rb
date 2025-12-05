@@ -22,7 +22,7 @@ module FtpVersions
     IO.popen(["curl", "-s", url]) do |io|
       while io.gets
         $_.chomp!
-        if $_ =~ /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)/
+        if $_ =~ /(\d+) (\w+ \d+ (?: \d+|\d+:\d+)) (emacs-([\d.]+(?:-rc\d*|[a-z])?).tar.[xg]z)$/
           version.push( { :version=>Gem::Version.new($4), :file=>$3, :date=>$2, :size=>$1, :url => url+$3 } )
         end
       end
