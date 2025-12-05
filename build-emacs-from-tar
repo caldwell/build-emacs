@@ -25,7 +25,7 @@ Vsh = VerboseShell
 
 $steps = %W"unpack configure clean make install copylibs"
 def build_emacs(src_dir, dep_dir, out_name, options={ })
-  out_name = out_name + ".tar.bz2"
+  out_name = out_name + ".tar.xz"
   puts "building emacs: #{src_dir} => #{out_name}"
   options[:cc] ||= "cc"
   options[:extra_cc_options] ||= ''
@@ -65,7 +65,7 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
       report_strays collector.strays
     end
 
-    FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cjf #{out_name} Emacs.app")) }
+    FileUtils.cd('nextstep') { Vsh.system(*(%W"tar cJf #{out_name} Emacs.app")) }
   end
   Vsh.mv(File.join(src_dir, 'nextstep', out_name), out_name, :force => true)
   out_name

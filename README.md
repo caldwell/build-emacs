@@ -20,15 +20,6 @@ build an old architecture (like PowerPC), you need to be running on a system
 that can actually execute binaries of that architecture.
 
 
-### XZ
-
-Recent Emacs pretests are being distributed in `.tar.xz` format. The
-"fetch-emacs-from-ftp" script will convert from `.xz` to `.tar.bz2` so that
-XZ doesn't need to be installed on every build machine. But you will need
-the "xz" program on the machines that runs "fetch-emacs-from-ftp". The
-easiest way to get it is through [homebrew](http://brew.sh/): "brew install xz"
-
-
 ### XCode Command Line Tools
 
 Building emacs requires that the XCode command line tools be installed so that
@@ -84,9 +75,8 @@ loud when it is given.
 ### fetch-emacs-from-ftp
 
 This takes an ftp url (`ftp://ftp.gnu.org/gnu/emacs/`, for example), and
-downloads the latest version of the Emacs source code found there. It will
-also convert the source from a `.tar.xz` to a `.tar.bz2` (so that the main
-build VMs don't need to have "XZ" installed).
+downloads the latest version of the Emacs source code found there (preferring
+`.tar.xz` archives). 
 
 ### build-emacs-from-tar
 
@@ -106,7 +96,7 @@ the latest code and then tars it up like so:
     DIR=emacs-$DATE-$SHORT
     git archive --prefix="$DIR/" HEAD | tar x
     (cd $DIR && ./autogen.sh)
-    tar cjf $DIR.tar.bz2 $DIR
+    tar cJf $DIR.tar.xz $DIR
 
 #### Emacs Dependencies
 
@@ -149,21 +139,19 @@ Example
 
     $ ./fetch-emacs-from-ftp -v ftp://ftp.gnu.org/pub/gnu/emacs
     + curl --continue-at - --silent -O ftp://ftp.gnu.org/pub/gnu/emacs/emacs-25.1.tar.xz
-    shell(#<Th:0x007febed8a48b0>): /usr/local//brew//bin/xzcat emacs-25.1.tar.xz
-    shell(#<Th:0x007febed8a48b0>): /usr/bin/bzip2
-    $ ls *.bz2
-    emacs-25.1.tar.bz2
-    $ ./build-emacs-from-tar -v -j 8 emacs-25.1.tar.bz2 release
+    $ ls *.xz
+    emacs-25.1.tar.xz
+    $ ./build-emacs-from-tar -v -j 8 emacs-25.1.tar.xz release
       ... Lots out output snipped ...
-    Built Emacs-25.1-10.12-x86_64.tar.bz2, Emacs-25.1-10.12-x86_64-dependencies.tar
-    $ ./combine-and-package -v Emacs-25.1-10.12-x86_64.tar.bz2
+    Built Emacs-25.1-10.12-x86_64.tar.xz, Emacs-25.1-10.12-x86_64-dependencies.tar
+    $ ./combine-and-package -v Emacs-25.1-10.12-x86_64.tar.xz
       ... More output snipped ...
     created: Emacs-25.1-universal.dmg
 
 License
 -------
 
-Copyright © 2004-2024 David Caldwell <david@porkrind.org>
+Copyright © 2004-2025 David Caldwell <david@porkrind.org>
 
 The scripts and programs contained in this distribution are licensed under
 the GNU General Public License (v3.0). See the LICENSE file for details.
