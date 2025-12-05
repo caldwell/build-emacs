@@ -28,6 +28,7 @@ module FtpVersions
       end
     end
 
-    version.sort{|a,b| a[:version] <=> b[:version]}
+    compression_priority = { '.xz' => 1, '.gz' => 0 }
+    version.sort_by{ |v| [v[:version], compression_priority[File.extname(v[:file])]] }
   end
 end
