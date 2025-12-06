@@ -34,7 +34,7 @@ class Variant < Struct.new(:os, :arch, :features, :build, :deps, keyword_init: t
   def to_json(state); self.to_h.tap {|h| h.delete(:build) unless h[:build]}.to_json(state) end
 end
 
-class Build < Struct.new(:name, :emacs_rev, :date, :arch, :os_rev, :kind, :git_ref, :vcs, :vcs_rev, :build_id, :version, keyword_init: true)
+class Build < Struct.new(:name, :emacs_rev, :date, :arch, :os_rev, :kind, :git_ref, :vcs, :vcs_rev, :build_id, :version, :changes, keyword_init: true)
   def to_json(state); self.to_h.to_json(state) end
 end
 
