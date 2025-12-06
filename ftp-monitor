@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+#  Copyright © 2014-2025 David Caldwell
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+require 'optparse'
+require_relative './ftp-versions'
+require_relative './verbose-shell'
+Vsh = VerboseShell
+
+disable=""
+
+(opts=OptionParser.new do |opts|
+  opts.banner = "Usage:\n\t#{$0} [options]"
+  opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
+  opts.on(      "--disable", "Touch disable-new-{kind} (for testing)") { disable = "disable-" }
+  opts.on_tail("-h", "--help") { puts opts; exit }
+end).parse!
+
+types = { pretest: { url: FtpVersions::PretestUrl,
+                     dir: ENV['PRETEST_DIR'] || abort("Missing PRETEST_DIR env var") },
+          release: { url: FtpVersions::ReleaseUrl,
+                     dir: ENV['RELEASE_DIR'] || abort("Missing RELEASE_DIR env var")  }, }
+
+types.each do |kind, config|
+  puts "Checking for #{kind} in #{config[:url]}"
+  latest = FtpVersions.versions(config[:url]).last
+
+  permalinks=Hash[IO.read(File.join(config[:dir], "builds/permalinks")
+                            .tap { |f| abort "No Jenkins permalinks file found in #{f}" unless File.exist? f })
+                    .split("\n").map { |l| l.split(" ") }]
+  dir=File.join(config[:dir], "builds", permalinks["lastSuccessfulBuild"], "archive")
+
+  base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
+  puts "Checking for #{base} in #{dir}" if Vsh.verbose > 0
+  Vsh.touch("#{disable}new-#{kind}") unless %W[.gz .xz .bz2].map {|ext| File.file?(File.join(dir, base + ext)) }.include? true
+end
