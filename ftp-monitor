@@ -13,6 +13,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'json'
 require 'optparse'
 require_relative './ftp-versions'
 require_relative './verbose-shell'
@@ -21,27 +22,24 @@ Vsh = VerboseShell
 disable=""
 
 (opts=OptionParser.new do |opts|
-  opts.banner = "Usage:\n\t#{$0} [options]"
+  opts.banner = "Usage:\n\t#{$0} [options] <meta-file>..."
   opts.on("-v", "--verbose", "Turn up the verbosity") { |v| Vsh.verbose = true }
   opts.on(      "--disable", "Touch disable-new-{kind} (for testing)") { disable = "disable-" }
   opts.on_tail("-h", "--help") { puts opts; exit }
 end).parse!
 
+metas = ARGV.dup.map { |f| JSON.parse(File.read(f)) }
+opts.abort("Need at least one .meta file\n\n"+opts.help) if metas.length < 1
+
 types = { pretest: { url: FtpVersions::PretestUrl,
-                     dir: ENV['PRETEST_DIR'] || abort("Missing PRETEST_DIR env var") },
+                     meta: metas.find { |m| m['kind'] == 'pretest' } },
           release: { url: FtpVersions::ReleaseUrl,
-                     dir: ENV['RELEASE_DIR'] || abort("Missing RELEASE_DIR env var")  }, }
+                     meta: metas.find { |m| m['kind'] == 'release' } } }
 
 types.each do |kind, config|
   puts "Checking for #{kind} in #{config[:url]}"
   latest = FtpVersions.versions(config[:url]).last
 
-  permalinks=Hash[IO.read(File.join(config[:dir], "builds/permalinks")
-                            .tap { |f| abort "No Jenkins permalinks file found in #{f}" unless File.exist? f })
-                    .split("\n").map { |l| l.split(" ") }]
-  dir=File.join(config[:dir], "builds", permalinks["lastSuccessfulBuild"], "archive")
-
-  base = latest[:file].sub(/\.xz|\.gz|\.bz2/, "")
-  puts "Checking for #{base} in #{dir}" if Vsh.verbose > 0
-  Vsh.touch("#{disable}new-#{kind}") unless %W[.gz .xz .bz2].map {|ext| File.file?(File.join(dir, base + ext)) }.include? true
+  warn "no current #{kind} found in .meta files" unless config[:meta]
+  Vsh.touch("#{disable}new-#{kind}") unless latest[:version].to_s == config[:meta]&.send(:[], 'emacs_rev')
 end
