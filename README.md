@@ -124,28 +124,44 @@ the latest code and then tars it up like so:
     (cd $DIR && ./autogen.sh)
     tar cJf $DIR.tar.xz $DIR
 
-#### Emacs Dependencies
+#### Emacs Dependencies (automatic)
 
 By default `build-emacs-from-tar` will attempt to gather several extra
 dependencies to make Emacs more full featured. You can disable this with the
-`--no-deps` option. There are 2 ways the dependencies can be built:
+`--no-deps` option. There are 2 ways the script can automatically manage
+dependencies:
 
 1. By downloading prebuilt packages using [Nix](https://nixos.org/). If you
    have [installed Nix on your Mac](https://nixos.org/download/#nix-install-macos),
-   then `build-emacs-from-tar` should autodetect this and use `nix-shell`
+   then `build-emacs-from-tar` should auto-detect this and use `nix-shell`
    (which must be in your `PATH`) to install a list of dependencies. The
    dependency list can be found in `dependencies.nix`.
 
 2. By downloading and compiling a list programs. This happens if Nix is not
    installed. The list is canned and can be found in
-   `build-dependencies.rb`. This method is not used any more by the builds
-   on emacsformacosx.com as it is prone to getting out of date and requires
-   a lot of up-keep. The code to do this (`build.rb`) will be removed at
-   some point.
+   `build-dependencies.rb`. This method is considered deprecated and is only
+   used by emacsformacosx.com for building on Mac OS X 10.12 since Nix
+   doesn't support that version. This method is prone to getting out of date
+   and requires lot of up-keep. The code to do this (`build.rb`) will be
+   removed once we stop building on 10.12.
 
 No matter which method is used, `build-emacs-from-tar` modifies the
 dependencies' libraries as it copies them into `Emacs.app` so that the app
 bundle remains portable.
+
+> [!IMPORTANT]
+> You almost certainly don't want to use method 2 on a modern macOS. If you
+> don't have Nix installed, you'll have to manually install any dependencies
+> (using `--no-deps`, see below).
+
+#### Emacs Dependencies (manual)
+
+You can manage the dependencies yourself using the `--no-deps` option. As long
+as they are in the `PATH` (and the `PKG_CONFIG_PATH`) then Emacs's
+`configure` script should find them and use them.
+
+> [!NOTE]
+> There is no provision for making a portable app bundle with `--no-deps`.
 
 ### The Rust launcher
 
