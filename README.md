@@ -48,14 +48,14 @@ the effort yet.
 
 ### XCode Command Line Tools
 
-Building emacs requires that the XCode command line tools be installed so that
+Building Emacs requires that the XCode command line tools be installed so that
 some libraries (libxml2, at least) are available.
 
     xcode-select --install
 
 Currently, Homebrew installs a pkg-config definition for the built in
 libxml2, but uses deprecated paths that don't exist by default on newer
-MacOS versions (10.14 at least). The symptom is this error:
+macOS versions (10.14 at least). The symptom is this error:
 
       CC       xml.o
     xml.c:26:10: fatal error: 'libxml/tree.h' file not found
