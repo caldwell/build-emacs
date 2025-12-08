@@ -1,8 +1,33 @@
 Emacs Build Scripts
 ===================
 
-These are the emacs build scripts that produces the builds at
-http://emacsformacosx.com/.
+These are the Emacs build scripts that produce the builds at
+https://emacsformacos.com/.
+
+Project Status and Scope
+------------------------
+
+The scripts here are focused on building Emacs for [Emacs For
+macOS](https://emacsformacos.com/). They aren't trying to be overly generic
+with a ton of options for every conceivable situation. However, they are
+abstracted enough to be coerced into different
+[CI](https://en.wikipedia.org/wiki/Continuous_integration) systems. So
+perhaps they will be useful to someone else (even if for no other reason
+than seeing how the sausage gets made).
+
+There is no guarantee of "API"/"UI" stability—command line options and
+defaults might change.
+
+This GitHub repo is a mirror of the main repo that the builds are actually
+built from. That repo is private as there is a lot of churn while developing
+(it gets force pushed _a lot_ while end-to-end testing the CI). I try to
+push to this public repo when the code has stabilized (ie, the force pushing
+has stopped) but sometimes I forget.
+
+This repo might go for long periods of time without updates. However, as
+long as I continue to be an Emacs and macOS user, I will to continue to run
+[Emacs For macOS](https://emacsformacos.com/) and keep tweaking the builds
+as makes sense.
 
 Prerequisites
 -------------
@@ -14,11 +39,12 @@ machines (or VMs) and integrate with continuous integration servers (the
 builds on emacsformacosx.com run from Jenkins now). This means that you can
 build whatever architectures you have access to.
 
-Note that cross-compiling Emacs is (still) not possible due to the "unexec"
-step, which requires the binary that was built to be run. So if you want to
-build an old architecture (like PowerPC), you need to be running on a system
-that can actually execute binaries of that architecture.
-
+Historically cross-compiling Emacs wasn't possible due to the "unexec" step,
+which required the binary that was built to be run. Modern Emacs uses a
+"portable" dumper now, so cross-compilation may be possible. These scripts
+do not attempt cross-compilation (aside from the launcher) because they were
+written before the portable dumper existed and changing it hasn't been worth
+the effort yet.
 
 ### XCode Command Line Tools
 
