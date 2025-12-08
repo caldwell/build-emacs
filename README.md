@@ -172,9 +172,30 @@ To compile the Rust launcher (needed by `combine-and-package`):
 ### combine-and-package
 
 This takes multiple tar files as input, unpacks and combines them into a
-final "fat" Emacs.app, then creates a final disk image (`.dmg`). It takes an
-optional `--sign` parameter (`--sign="my identity"`) which makes it code
-sign the Emacs.app.
+final "fat" Emacs.app, then creates a final disk image (`.dmg`).
+
+#### Notable parameters:
+
+* `--sign=<identity>` (optional)
+
+  If this is passed in then it code signs the Emacs.app.
+
+* `--keychain-profile=<name>` (optional)
+
+  If this is passed in then it will notarize the final `.dmg`. This uses a
+  keychain profile so that you don't have to trust your Apple ID and
+  password to the script. You can use Apple's tools to set up a keychain
+  profile:
+
+  ```
+  xcrun notarytool store-credentials --help
+  ```
+
+* `--keychain=<path>` (optional)
+
+  When used in conjunction with `--keychain-profile`, the script will pass
+  this option through to Apple's `notarytool` (it tells notarytool which
+  keychain the profile is in).
 
 Example
 -------
