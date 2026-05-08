@@ -157,6 +157,7 @@ os_maj_version = `sw_vers -productVersion`.chomp.sub(/^(\d+\.\d+)\.\d+/,'\1')
 os_maj_version = $1 if os_maj_version =~ /^(\d+)\./ && $1.to_i > 10 # After 10.15.x Apple moved to 11.x, 12.x, etc.
 
 options = { :cc => 'i686-apple-darwin10-gcc-4.2.1',    :host => 'i686-apple-darwin',    :min_os => '10.5' }.merge(options) if arch == :i386
+options[:min_os] ||=  '10.12' if os_maj_version == '10.14' && ENV["IN_NIX_SHELL"]
 options[:min_os] ||=  '10.7' if os_maj_version == '10.8'
 options[:min_os] ||=  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] ||=  '10.6' if nightly && options[:min_os] == '10.5'
