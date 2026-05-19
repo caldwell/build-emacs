@@ -72,6 +72,10 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
         if sdk_libs.start_with? '/nix/store/'
           Vsh.system(*%W"rsync -a --chmod=u+w --copy-unsafe-links --exclude swift #{sdk_libs}/ #{dest_lib}/libgccjit/sdk-libs/")
         end
+        if File.symlink?("#{dest_lib}/libgccjit/lib") &&
+           File.readlink("#{dest_lib}/libgccjit/lib") == 'lib' # nix on 10.14 has a symlink loop here!
+          Vsh.rm("#{dest_lib}/libgccjit/lib")
+        end
         Vsh.chmod_R("u+w", "#{dest_lib}/libgccjit") # Stupid built-in rsync's --chmod is broken!
       end
 
