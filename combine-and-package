@@ -61,6 +61,7 @@ def combine(emacsen, out_app)
       Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/bin'))
       Vsh.rm_rf(File.join(out_app,     "Contents/MacOS/lib-#{arch_version}"))
       Vsh.rm_rf(File.join(out_app,     'Contents/MacOS/libexec'))
+      Vsh.rm_rf(File.join(out_app,     'Contents/Frameworks'))
     end
     Vsh.cp(  File.join(emacs[:app], 'Contents/MacOS/Emacs'),
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}"))
@@ -74,6 +75,10 @@ def combine(emacsen, out_app)
              File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}"))
     Vsh.mv(  File.join(out_app,     "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"), # FIXME: See if we can configure a custom libexec w/arch_version `C-h v exec-directory`
              File.join(out_app,     "Contents/MacOS/Emacs-#{arch_version}.pdmp")) if File.exist?(File.join(out_app, "Contents/MacOS/libexec-#{arch_version}/Emacs.pdmp"))
+    if File.exist? File.join(emacs[:app], 'Contents/Frameworks') # Native comp libraries. They're stored in hashed directories so arches don't collide.
+      Vsh.cp_r(File.join(emacs[:app],     'Contents/Frameworks'),
+               File.join(out_app,         'Contents/'))
+    end
   end
 
   # Grab the lowest os version for each arch--We'll lipo those together for the non-versioned bin and libexec dirs.
