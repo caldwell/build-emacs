@@ -108,7 +108,18 @@ class LibCollector
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
         end
       elsif line.strip.start_with?("#{new_id} ")
-      elsif !line.match(%r{^(?:\s+(?:/System/|@(loader|executable)_path/|@rpath/|/usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib|/usr/lib/libresolv.\w+.dylib|#{Regexp.escape(File.basename(@dest_dir))}))|^#{Regexp.escape(exe)}:})
+      elsif !line.match(%r{^(?:
+                             \s+(?:
+                               /System/                                    |
+                               @(loader|executable)_path/                  |
+                               @rpath/                                     |
+                               /usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib |
+                               /usr/lib/libresolv.\w+.dylib                |
+                               #{Regexp.escape(File.basename(@dest_dir))}
+                             )
+                           )|
+                           ^#{Regexp.escape(exe)}:
+                        }x)
         stray[:lib].push(line)
       end
     end
