@@ -103,8 +103,10 @@ class LibCollector
           Vsh.mkdir_p(@dest_dir)
           if framework
             Vsh.cp_r(orig_path, @dest_dir)
+            Vsh.chmod_R("u+w", File.join(@dest_dir, File.basename(orig_path))) # technically not needed, but fixes `rsync -E` in make-dmg on macOS 26
           else
             Vsh.cp(orig_path, File.join(@dest_dir, new_dep_lib))
+            Vsh.chmod("u+w", File.join(@dest_dir, new_dep_lib))                # ditto
           end
           @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
