@@ -1,5 +1,5 @@
 let
-  inherit (builtins) compareVersions elemAt readFile splitVersion;
+  inherit (builtins) compareVersions currentSystem deepSeq elemAt fetchGit readFile splitVersion toJSON tryEval;
   macos_full_version = readFile (
     (import <nixpkgs> {}).runCommandLocal "macos-version" {} ''
       echo -n $(/usr/bin/sw_vers -productVersion) > $out
@@ -25,11 +25,11 @@ let
       pkgs = nixpkgs_at_rev "a8d610af3f1a5fb71e23e08434d8d61a466fc942";
       tree-sitter = pkgs.tree-sitter;
     };
-  }.${builtins.currentSystem} or (throw "Unknown macOS system ${builtins.currentSystem}");
+  }.${currentSystem} or (throw "Unknown macOS system ${currentSystem}");
 
   inherit (system) pkgs tree-sitter;
 
-  nixpkgs_at_rev = rev: import (builtins.fetchGit {
+  nixpkgs_at_rev = rev: import (fetchGit {
     name = "emacs-dependencies-base";
     url = "https://github.com/NixOS/nixpkgs/";
     ref = "refs/heads/nixpkgs-unstable";
@@ -93,11 +93,11 @@ pkgs.mkShell {
     # This magics check for the existence of darwin.apple_sdk.frameworks.AppKit which is only available in the
     # old nixpkgs we need to use for intel macs. In the newer nixpkgs, this isn't just nonexistent, it actively
     # throws, hence the weird tryEval stuff.
-    if let e = { x = pkgs?darwin.apple_sdk.frameworks.AppKit; }; in (builtins.tryEval (builtins.deepSeq e e)).value?x
+    if let e = { x = pkgs?darwin.apple_sdk.frameworks.AppKit; }; in (tryEval (deepSeq e e)).value?x
     then [pkgs.darwin.apple_sdk.frameworks.AppKit]
     else []
   );
 
   # Publish some Nix details that build-emacs-from-tar can use
-  DEPENDENCY_DETAILS = builtins.toJSON dependency-details;
+  DEPENDENCY_DETAILS = toJSON dependency-details;
 }
