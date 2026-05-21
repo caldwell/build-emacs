@@ -1,9 +1,25 @@
 let
+  inherit (builtins) compareVersions elemAt readFile splitVersion;
+  macos_full_version = readFile (
+    (import <nixpkgs> {}).runCommandLocal "macos-version" {} ''
+      echo -n $(/usr/bin/sw_vers -productVersion) > $out
+    ''
+  );
+
+  macos_major_version =
+    let v = splitVersion macos_full_version;
+    in if (compareVersions macos_full_version "11.0") < 0
+       then (elemAt v 0) + "_" + (elemAt v 0)
+       else (elemAt v 0);
+
   system = {
-    x86_64-darwin = {
+    x86_64-darwin = if (compareVersions macos_major_version "10.14") <= 0 then {
       pkgs = nixpkgs_at_rev "882842d2a908700540d206baa79efb922ac1c33d";
       tree-sitter = tree-sitter-backport;
-    };
+    } else if (compareVersions macos_major_version "11") <= 0 then {
+      pkgs = nixpkgs_at_rev "11cb3517b3af6af300dd6c055aeda73c9bf52c48"; # 25.05
+      tree-sitter = tree-sitter-backport;
+    } else throw "Haven't figured out what runs on macOS ${macos_major_version} (x86_64)";
 
     aarch64-darwin = {
       pkgs = nixpkgs_at_rev "a8d610af3f1a5fb71e23e08434d8d61a466fc942";
@@ -47,8 +63,11 @@ let
     pkgs.librsvg
     tree-sitter
     pkgs.sqlite
-    pkgs.libgccjit
-  ];
+  ] ++ (
+    if compareVersions macos_major_version "11" >= 0
+    then [ pkgs.libgccjit ]
+    else []
+  );
 
   dependency-details = (map (dep: {
     name = dep.pname;
@@ -60,7 +79,7 @@ in
 
 pkgs.mkShell {
   passthru = {
-    inherit pkgs deps dependency-details ncurses-no-nix-store tree-sitter-backport system;
+    inherit pkgs deps dependency-details ncurses-no-nix-store tree-sitter-backport system macos_full_version macos_major_version;
   };
 
   buildInputs = [
