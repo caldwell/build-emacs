@@ -37,6 +37,7 @@ let
   }) {};
 
   tree-sitter-backport = pkgs.tree-sitter.overrideAttrs (finalAttrs: previousAttrs: {
+    __intentionallyOverridingVersion = true;
     version = "0.25.10";
     hash = "sha256-aHszbvLCLqCwAS4F4UmM3wbSb81QuG9FM7BDHTu1ZvM=";
     cargoHash = "sha256-/gYOehFW190STjkIDDH3vJjG45sBww6E+1Rz09aM9Cs=";
