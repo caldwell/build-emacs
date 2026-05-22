@@ -26,7 +26,6 @@ class LibCollector
 
   def copy_libs(exe, options={})
     rel_path_to_dest = "@loader_path/" + Pathname.new(@dest_dir).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
-    options[:rpath] ||= [];
     options[:depth] ||= 0;
     puts "#{'='*(options[:depth]+1)*2}> Processing #{exe}" if Vsh.verbose
     new_id = Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir).dirname).to_s
@@ -36,6 +35,7 @@ class LibCollector
         Vsh.system(*%W"install_name_tool -id #{new_id} #{exe}")
       end
     }
+    rpaths=nil
     stray={ lib:[], path:[], exe:exe }
     Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
       # HACK! I know we just added all that nice code to handle frameworks and rpaths (and
@@ -71,13 +71,15 @@ class LibCollector
         end
 
         if dep_base == "@rpath"
-          # Accumulating our rpaths here isn't technically correct--If some random binary
-          # down the chain has an rpath this makes it pollute our lookups from then
-          # on. Practically it should be ok since we are currently pulling from Nix and
-          # everything _should_ be sharing the same stuff anyway.
-          options[:rpath] += Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
-                               .select {|c| /^\s*cmd LC_RPATH$/ =~ c}.map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
-          rpath = options[:rpath].select {|p| File.exist?(orig_dep.sub(/@rpath/, p)) }.first or raise "Can't resolve rpath #{orig_dep} in #{rpaths}"
+          if !rpaths
+            rpaths = Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
+                                                      .select {|c| /^\s*cmd LC_RPATH$/ =~ c}
+                                                      .map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp &&
+                                                            # A little tricky, but we have to look for the dependency relative to the original exe.
+                                                            path.sub(/@loader_path/, File.dirname(@origin[File.basename(exe)])) }
+          end
+          rpath = rpaths.select {|p| File.exist?(orig_dep.sub(/@rpath/, p)) }
+                        .first or raise "Can't resolve rpath #{orig_dep} in #{rpaths.inspect}"
           orig_path = orig_path.sub(/@rpath/, rpath)
           orig_lib = orig_lib.sub(/@rpath/, rpath)
         end
@@ -116,7 +118,6 @@ class LibCollector
                              \s+(?:
                                /System/                                    |
                                @(loader|executable)_path/                  |
-                               @rpath/                                     |
                                /usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib |
                                /usr/lib/libresolv.\w+.dylib                |
                                #{Regexp.escape(File.basename(@dest_dir))}  |
