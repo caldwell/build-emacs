@@ -51,7 +51,7 @@ class LibCollector
         }
         next
       end
-      (m,orig_dep,dep_base, dep_path,lib)=line.match(%r,^\s+((#{@dep_dir}|@rpath)(/[^ ]+)+/(lib[^/ ]+))\s,).to_a
+      (m,orig_dep,dep_base, dep_path,lib)=line.match(%r,^\s+((#{@dep_dir}|@rpath)(/[^ ]+)*/(lib[^/ ]+))\s,).to_a
       (m,orig_dep,dep_base, dep_path,framework,lib)=line.match(%r,^\s+((#{@dep_dir}|@rpath)(/[^ ]+)*/([^/ ]+\.framework)(/[^ ]+)+)\s,).to_a unless m
       if m
         # We have 2 boolean conditons (rp=rpath, fr=framework), so there are 4 cases we need to cover:
@@ -65,7 +65,7 @@ class LibCollector
           orig_lib = File.join(orig_path, lib)
           new_dep_lib = File.join(framework, lib)
         else
-          orig_path = File.join(dep_base, dep_path, lib)
+          orig_path = File.join(dep_base, dep_path||"", lib)
           orig_lib = orig_path
           new_dep_lib = lib
         end
