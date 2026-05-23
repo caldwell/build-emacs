@@ -28,46 +28,31 @@ class LibCollector
     options[:depth] ||= 0;
     puts "#{'='*(options[:depth]+1)*2}> Processing #{exe}" if Vsh.verbose
 
-    lc = Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
-
-    id = lc.select {|c| /^\s*cmd LC_ID_DYLIB$/ =~ c}
-           .map { |id| /^\s*name\s+(?<name>.*)\s+\(offset[^)]+\)$/ =~ id && name }
-           .first
+    obj = MachO.new(exe)
 
     rel_path_to_dest = "@loader_path/" + Pathname.new(@dest_dir).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
-    if id
-      new_id = '@rpath/' + Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir)).to_s
-      with_writable_mode(exe) {
-        # Make the new id match the imports so we don't accidentally get our deps overridden
-        Vsh.system(*%W"install_name_tool -id #{new_id} #{exe}")
-      }
+
+    if obj.id
+      # Make the new id match the imports so we don't accidentally get our deps overridden
+      obj.id = '@rpath/' + Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir)).to_s
     end
 
-    orig_rpaths = lc.select {|c| /^\s*cmd LC_RPATH$/ =~ c}
-                    .map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
-
-    orig_rpaths.each {|rp|  Vsh.system(*%W"install_name_tool -delete_rpath #{rp} #{exe}") }
-    Vsh.system(*%W"install_name_tool -add_rpath #{rel_path_to_dest} #{exe}")
+    orig_rpaths = obj.rpaths
+    obj.rpaths.each {|rp| obj.delete_rpath(rp) }
+    obj.add_rpath(rel_path_to_dest)
 
     stray={ lib:[], path:[], exe:exe }
-    Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
-      next if line.strip.start_with?("#{new_id} ")
-
+    obj.dylibs.dup.each do |dylib|
       # HACK! I know we just added all that nice code to handle frameworks and rpaths (and
       # it works!), but it turns out codesign doesn't like this library. Perhaps because
       # it's named like a system library? Anyway, it appears to be compatible with the
       # actual system library, so lets just point to that, remove the rpath and be done.
-      if %r{^\s+(?<cf>@rpath/CoreFoundation.framework/Versions/A/CoreFoundation)\s+} =~ line
-        with_writable_mode(exe) {
-          Vsh.system(*%W"install_name_tool -change #{cf} /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation #{exe}") # Wheeee!
-          Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
-            .select {|c| /^\s*cmd LC_RPATH$/ =~ c}.map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
-            .each {|rpath| Vsh.system(*%W"install_name_tool -delete_rpath #{rpath} #{exe}") }
-        }
+      if dylib == "@rpath/CoreFoundation.framework/Versions/A/CoreFoundation"
+        obj.rename_dylib(dylib, "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation")
         next
       end
-      (m,orig_dep,dep_base, dep_path,lib)=line.match(%r,^\s+((#{@dep_dir}|@rpath)(/[^ ]+)*/(lib[^/ ]+))\s,).to_a
-      (m,orig_dep,dep_base, dep_path,framework,lib)=line.match(%r,^\s+((#{@dep_dir}|@rpath)(/[^ ]+)*/([^/ ]+\.framework)(/[^ ]+)+)\s,).to_a unless m
+      (m,orig_dep,dep_base, dep_path,lib) = dylib.match(%r,^((#{@dep_dir}|@rpath)(/[^ ]+)*/(lib[^/ ]+))$,).to_a
+      (m,orig_dep,dep_base, dep_path,framework,lib) = dylib.match(%r,^((#{@dep_dir}|@rpath)(/[^ ]+)*/([^/ ]+\.framework)(/[^ ]+)+)$,).to_a unless m
       if m
         # We have 2 boolean conditons (rp=rpath, fr=framework), so there are 4 cases we need to cover:
         #        Rename:   orig_dep                -> rel_path_to_dest/new_dep_lib                   Copy: orig_path                  -> dest                  Recurse: dest/new_dep_lib
@@ -110,10 +95,7 @@ class LibCollector
           puts "  Retrying with new name #{new_dep_lib}"
         end
 
-
-        with_writable_mode(exe) {
-          Vsh.system(*%W"install_name_tool -change #{orig_dep} #{File.join("@rpath", new_dep_lib)} #{exe}") # Point to where we're about to copy the lib
-        }
+        obj.rename_dylib(orig_dep, File.join("@rpath", new_dep_lib))
 
         unless @origin[new_dep_lib]
           Vsh.mkdir_p(@dest_dir)
@@ -127,19 +109,15 @@ class LibCollector
           @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
         end
-      elsif !line.match(%r{^(?:
-                             \s+(?:
+      elsif !dylib.match(%r{^(?:
                                /System/                                    |
                                @(loader|executable)_path/                  |
                                /usr/lib/lib(System|objc|c\+\+)\.\w+\.dylib |
                                /usr/lib/libresolv.\w+.dylib                |
                                #{Regexp.escape(File.basename(@dest_dir))}  |
-                               #{Regexp.escape(File.basename(exe))} # this catches ids that have no paths
                              )
-                           )|
-                           ^#{Regexp.escape(exe)}:
                         }x)
-        stray[:lib].push(line)
+        stray[:lib].push(dylib)
       end
     end
     stray[:path].concat(Vsh.capture(*%W"strings #{exe}").split("\n").select {|l| l.match(%r{/nix/store/}) })
@@ -147,10 +125,84 @@ class LibCollector
   end
 end
 
-def with_writable_mode(file)
-  old = File.stat(file).mode
-  File.chmod(0775, file)
-  yield
-  File.chmod(old, file)
-end
+class MachO
+  def initialize(exe)
+    @exe = exe
+    @lc = Vsh.capture(*%W"otool -l #{@exe}").split(/^(?=(?:Load command|Section))/m)
 
+    # Load command 4
+    #           cmd LC_ID_DYLIB
+    #       cmdsize 104
+    #          name /nix/store/bzmg171wk7x7vkhnr1m51v6yphb7cfm7-mpfr-4.2.2/lib/libmpfr.6.dylib (offset 24)
+    #    time stamp 1 Wed Dec 31 16:00:01 1969
+    #       current version 9.2.0
+    # compatibility version 9.0.0
+    @id = @lc.select {|c| /^\s*cmd LC_ID_DYLIB$/ =~ c}
+             .map { |id| /^\s*name\s+(?<name>.*)\s+\(offset[^)]+\)$/ =~ id && name }
+             .first
+
+    # Load command 48
+    #           cmd LC_RPATH
+    #       cmdsize 40
+    #          path @loader_path/lib-arm64-11 (offset 12)
+    @rpaths = @lc.select {|c| /^\s*cmd LC_RPATH$/ =~ c}
+                 .map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
+
+    # Load command 11
+    #           cmd LC_LOAD_DYLIB
+    #       cmdsize 112
+    #          name /nix/store/k2rw8djc491iqmf9lm6y1yk5939hbds1-gmp-with-cxx-6.3.0/lib/libgmp.10.dylib (offset 24)
+    #    time stamp 2 Wed Dec 31 16:00:02 1969
+    #       current version 16.0.0
+    # compatibility version 16.0.0
+    @dylibs = @lc.select {|c| /^\s*cmd LC_LOAD_DYLIB$/ =~ c}
+                 .map {|rp| /^\s*name\s+(?<name>.*)\s+\(offset[^)]+\)$/ =~ rp && name }
+  end
+
+  def id
+    @id
+  end
+
+  def id=(new_id)
+    with_writable_mode(@exe) {
+      Vsh.system(*%W"install_name_tool -id #{new_id} #{@exe}")
+    }
+    @id = new_id
+  end
+
+  def rpaths
+    @rpaths
+  end
+
+  def add_rpath(rpath)
+    with_writable_mode(@exe) {
+      Vsh.system(*%W"install_name_tool -add_rpath #{rpath} #{@exe}")
+    }
+    @rpaths.push(rpath)
+  end
+
+  def delete_rpath(rpath)
+    with_writable_mode(@exe) {
+      Vsh.system(*%W"install_name_tool -delete_rpath #{rpath} #{@exe}")
+    }
+    @rpaths.delete_at(@rpaths.index(rpath))
+  end
+
+  def dylibs
+    @dylibs
+  end
+
+  def rename_dylib(old_name, new_name)
+    with_writable_mode(@exe) {
+      Vsh.system(*%W"install_name_tool -change #{old_name} #{new_name} #{@exe}")
+    }
+    @dylibs.map! {|lib| lib == old_name ? new_name : old_name }
+  end
+
+  def with_writable_mode(file)
+    old = File.stat(file).mode
+    File.chmod(0775, file)
+    yield
+    File.chmod(old, file)
+  end
+end
