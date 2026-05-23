@@ -25,19 +25,34 @@ class LibCollector
   end
 
   def copy_libs(exe, options={})
-    rel_path_to_dest = "@loader_path/" + Pathname.new(@dest_dir).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
     options[:depth] ||= 0;
     puts "#{'='*(options[:depth]+1)*2}> Processing #{exe}" if Vsh.verbose
-    new_id = Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir).dirname).to_s
-    with_writable_mode(exe) {
-      if Vsh.capture(*%W"otool -D #{exe}").split("\n").last.start_with? '/'
-        # remove our local build path from the id to leak as litle as possible (not that it really matters)
+
+    lc = Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
+
+    id = lc.select {|c| /^\s*cmd LC_ID_DYLIB$/ =~ c}
+           .map { |id| /^\s*name\s+(?<name>.*)\s+\(offset[^)]+\)$/ =~ id && name }
+           .first
+
+    rel_path_to_dest = "@loader_path/" + Pathname.new(@dest_dir).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
+    if id
+      new_id = '@rpath/' + Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir)).to_s
+      with_writable_mode(exe) {
+        # Make the new id match the imports so we don't accidentally get our deps overridden
         Vsh.system(*%W"install_name_tool -id #{new_id} #{exe}")
-      end
-    }
-    rpaths=nil
+      }
+    end
+
+    orig_rpaths = lc.select {|c| /^\s*cmd LC_RPATH$/ =~ c}
+                    .map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp && path }
+
+    orig_rpaths.each {|rp|  Vsh.system(*%W"install_name_tool -delete_rpath #{rp} #{exe}") }
+    Vsh.system(*%W"install_name_tool -add_rpath #{rel_path_to_dest} #{exe}")
+
     stray={ lib:[], path:[], exe:exe }
     Vsh.capture(*%W"otool -L #{exe}").split("\n").each do |line| # ex:   /Volumes/sensitive/src/build-emacs/brew/opt/gnutls/lib/libgnutls.30.dylib (compatibility version 37.0.0, current version 37.6.0)
+      next if line.strip.start_with?("#{new_id} ")
+
       # HACK! I know we just added all that nice code to handle frameworks and rpaths (and
       # it works!), but it turns out codesign doesn't like this library. Perhaps because
       # it's named like a system library? Anyway, it appears to be compatible with the
@@ -71,13 +86,12 @@ class LibCollector
         end
 
         if dep_base == "@rpath"
-          if !rpaths
-            rpaths = Vsh.capture(*%W"otool -l #{exe}").split(/^(?=(?:Load command|Section))/m)
-                                                      .select {|c| /^\s*cmd LC_RPATH$/ =~ c}
-                                                      .map {|rp| /^\s*path\s+(?<path>.*)\s+\(offset[^)]+\)$/ =~ rp &&
-                                                            # A little tricky, but we have to look for the dependency relative to the original exe.
-                                                            path.sub(/@loader_path/, File.dirname(@origin[File.basename(exe)])) }
-          end
+          # A little tricky, but we have to look for the dependency relative to the original exe.
+          # The roots of the dependency trees (Emacs.app contents after `make install`) have not been moved so
+          # their origin is just themselves.
+          origin = @origin[File.basename(exe)] || exe
+          rpaths = orig_rpaths.map {|path| path.sub(/@loader_path/, File.dirname(origin)) }
+
           rpath = rpaths.select {|p| File.exist?(orig_dep.sub(/@rpath/, p)) }
                         .first or raise "Can't resolve rpath #{orig_dep} in #{rpaths.inspect}"
           orig_path = orig_path.sub(/@rpath/, rpath)
@@ -98,7 +112,7 @@ class LibCollector
 
 
         with_writable_mode(exe) {
-          Vsh.system(*%W"install_name_tool -change #{orig_dep} #{File.join(rel_path_to_dest, new_dep_lib)} #{exe}") # Point to where we're about to copy the lib
+          Vsh.system(*%W"install_name_tool -change #{orig_dep} #{File.join("@rpath", new_dep_lib)} #{exe}") # Point to where we're about to copy the lib
         }
 
         unless @origin[new_dep_lib]
@@ -113,7 +127,6 @@ class LibCollector
           @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
         end
-      elsif line.strip.start_with?("#{new_id} ")
       elsif !line.match(%r{^(?:
                              \s+(?:
                                /System/                                    |
