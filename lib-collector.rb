@@ -108,6 +108,7 @@ class LibCollector
           end
           @origin[new_dep_lib] = orig_path
           copy_libs(File.join(@dest_dir, new_dep_lib), options.merge(depth: options[:depth]+1)) # Copy lib's deps, too
+          puts "#{'='*(options[:depth]+1)*2}> Back to #{exe}" if Vsh.verbose
         end
       elsif !dylib.match(%r{^(?:
                                /System/                                    |
