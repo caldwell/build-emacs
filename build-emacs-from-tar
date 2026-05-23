@@ -97,14 +97,6 @@ def build_emacs(src_dir, dep_dir, out_name, options={ })
   out_name
 end
 
-def with_writable_mode(file)
-  old = File.stat(file).mode
-  File.chmod(0775, file)
-  yield
-  File.chmod(old, file)
-end
-
-
 def prepare_extra_deps(dep_dir, out_name)
   dependencies = "#{out_name}-dependencies"
   Vsh.rm_rf dependencies

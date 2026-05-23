@@ -134,3 +134,10 @@ class LibCollector
   end
 end
 
+def with_writable_mode(file)
+  old = File.stat(file).mode
+  File.chmod(0775, file)
+  yield
+  File.chmod(old, file)
+end
+
