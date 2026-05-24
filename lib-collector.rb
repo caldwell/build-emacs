@@ -32,13 +32,13 @@ class LibCollector
 
     rel_path_to_dest = "@loader_path/" + Pathname.new(@dest_dir).relative_path_from(Pathname.new(exe).dirname).to_s.sub(/^\.$/,'')
 
-    if obj.id
+    if obj.id && options[:depth] > 0 # don't change the id of "root level" dylibs--they're installed elsewhere and should be correct.
       # Make the new id match the imports so we don't accidentally get our deps overridden
       obj.id = '@rpath/' + Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir)).to_s
     end
 
     orig_rpaths = obj.rpaths
-    obj.rpaths.each {|rp| obj.delete_rpath(rp) }
+    obj.rpaths.each {|rp| obj.delete_rpath(rp) if rp.start_with?("/") || options[:depth] > 0 } # don't remove (non-abs path) rpaths in "root level" exes. We assume they are correct.
     obj.add_rpath(rel_path_to_dest)
 
     stray={ lib:[], path:[], exe:exe }
