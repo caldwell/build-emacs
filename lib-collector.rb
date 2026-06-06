@@ -37,8 +37,8 @@ class LibCollector
       obj.id = '@rpath/' + Pathname.new(exe).relative_path_from(Pathname.new(@dest_dir)).to_s
     end
 
-    orig_rpaths = obj.rpaths
-    obj.rpaths.each {|rp| obj.delete_rpath(rp) if rp.start_with?("/") || options[:depth] > 0 } # don't remove (non-abs path) rpaths in "root level" exes. We assume they are correct.
+    orig_rpaths = obj.rpaths.clone
+    orig_rpaths.each {|rp| obj.delete_rpath(rp) if rp.start_with?("/") || options[:depth] > 0 } # don't remove (non-abs path) rpaths in "root level" exes. We assume they are correct.
     obj.add_rpath(rel_path_to_dest)
 
     stray={ lib:[], path:[], exe:exe }
