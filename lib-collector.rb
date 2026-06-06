@@ -176,6 +176,7 @@ class MachO
   end
 
   def add_rpath(rpath)
+    return if @rpaths.include? rpath
     with_writable_mode(@exe) {
       Vsh.system(*%W"install_name_tool -add_rpath #{rpath} #{@exe}")
     }
