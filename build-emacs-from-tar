@@ -188,8 +188,7 @@ options[:min_os] ||=  '10.7' if os_maj_version == '10.8'
 options[:min_os] ||=  '10.5' if os_maj_version == '10.6' && arch == :x86_64
 options[:min_os] ||=  '10.6' if nightly && options[:min_os] == '10.5'
 options[:min_os] ||=  '11'   if arch == :arm64 # Build for the oldest supported Apple Silicon machine
-# The gcc line returns the absolute path of the library if it can find it, or just the file name if it cannot:
-options[:extra_configure_flags] += %w"--without-native-compilation" unless libgccjit_exist?
+options[:extra_configure_flags] += %w"--without-native-compilation" unless libgccjit_exist? # Emacs >= 31: ./configure fails if libgccjit is not available.
 options[:extra_configure_flags] += %w"--with-jpeg=no --with-png=no --with-gif=no --with-tiff=no" if os_maj_version == '10.6'
 options[:extra_configure_flags] += %w"--with-gnutls=no" if disable_deps
 options[:extra_configure_flags] += %w"CFLAGS=-DNSTextAlignmentRight=NSRightTextAlignment" if os_maj_version.to_f < 10.12
