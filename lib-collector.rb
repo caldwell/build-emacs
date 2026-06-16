@@ -156,7 +156,15 @@ class MachO
     #    time stamp 2 Wed Dec 31 16:00:02 1969
     #       current version 16.0.0
     # compatibility version 16.0.0
-    @dylibs = @lc.select {|c| /^\s*cmd LC_LOAD_DYLIB$/ =~ c}
+    # --- also ---
+    # Load command 12
+    #           cmd LC_REEXPORT_DYLIB
+    #       cmdsize 112
+    #          name /nix/store/f3anvg741m7059d0gx42gr27fw5kg1qh-libiconv-109.100.2/lib/libcharset.1.dylib (offset 24)
+    #    time stamp 2 Wed Dec 31 16:00:02 1969
+    #       current version 1.0.0
+    # compatibility version 1.0.0
+    @dylibs = @lc.select {|c| /^\s*cmd (LC_LOAD_DYLIB|LC_REEXPORT_DYLIB)$/ =~ c}
                  .map {|rp| /^\s*name\s+(?<name>.*)\s+\(offset[^)]+\)$/ =~ rp && name }
   end
 
